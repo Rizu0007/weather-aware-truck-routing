@@ -81,6 +81,10 @@ whose usage policy asks for at most 1 request/second. Tuning scripts sleep 1 s b
 4. **`exclude` is not supported** on the demo server.
 5. Origin = destination returns `Ok` with a 0-distance, 2-coordinate route (not an error).
 6. Responses are large: Chicago–Denver with 2 alternatives was **785 KB** raw.
+8. **Per-segment durations don't add up to the route duration.** Across 92 cached routes, `route.duration`
+   exceeds `sum(annotation.duration)` by 0.09–1.29 % (32–304 s); distances agree within 0.2 %.
+   Likely turn/penalty time that OSRM adds to the total only. Found during C3 (2026-10-18).
+   Decision (approved): scale segment times proportionally so the arrival ETA equals `route.duration`.
 7. Durations are already conservative: average speed 50–58 mph on every trip and **0 % of miles
    faster than 65 mph**, so a 65 mph truck cap changes nothing (60 mph cap: Salt Lake–Denver +0.12 h).
 
@@ -274,6 +278,7 @@ autocomplete and cache results.
 | OSRM returns 1–2 routes | Via-point fallback is the normal path, not an edge case |
 | Raw via-points create absurd detours | Snap via-points to the nearest town via Photon `/reverse` |
 | Some corridors have only one sensible road | UI must handle and explain fewer than 3 routes |
+| Segment durations sum 0.1–1.3 % short of route duration | Scale them to the route total before computing ETAs |
 | No truck profile; speeds already ≤ 65 mph | Keep a 65 mph cap as a safeguard; document ETAs as car-profile based |
 | 785 KB route payloads | Simplify geometry server-side before sending to the browser |
 | Open-Meteo object vs array | Normalise to a list in the client |
