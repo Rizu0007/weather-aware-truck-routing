@@ -11,6 +11,9 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    env:
+      # Not a secret: only used to satisfy the required setting during tests.
+      DJANGO_SECRET_KEY: ci-test-only
     steps:
       - uses: actions/checkout@v7
 

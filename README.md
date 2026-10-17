@@ -14,7 +14,9 @@ Requirements: Python 3.12, [uv](https://docs.astral.sh/uv/), Node.js 24 (fronten
 
 ```bash
 cd backend
+cp .env.example .env    # local settings; DJANGO_SECRET_KEY is required
 uv sync                 # creates .venv and installs locked dependencies
+uv run python manage.py runserver   # API on http://127.0.0.1:8000/api/health
 uv run ruff check       # lint
 uv run ruff format      # format
 uv run pytest           # tests
