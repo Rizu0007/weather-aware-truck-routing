@@ -1,208 +1,219 @@
 # Build Plan
 
-Inputs: [ASSESSMENT.md](ASSESSMENT.md) (brief + agreed interpretations) and [API_NOTES.md](API_NOTES.md)
-(observed API behaviour). Requirement IDs (R1–R16) are listed at the bottom.
+Inputs: [ASSESSMENT.md](ASSESSMENT.md) (brief + agreed interpretations), [API_NOTES.md](API_NOTES.md)
+(observed API behaviour) and [RESEARCH.md](RESEARCH.md) (stack research with sources).
+Requirement IDs (R1–R16) are listed at the bottom.
 
-## 1. Tech stack
+## 0. What changed after the research phase
+
+Items marked **[changed]** below differ from the first version of this plan.
+
+| # | Before | After | Why (RESEARCH.md section) |
+|---|---|---|---|
+| 1 | React + **Vite** SPA served by Django | **Next.js 16** App Router on **Vercel** | Requested stack; React is still the UI layer (brief says React) |
+| 2 | One container (Django + WhiteNoise serves the SPA) | **Two deployables:** Vercel (Next.js) + Render (Django); Next.js **rewrites** `/api/*` to Django | Same-origin browser calls with no CORS; backend URL stays server-side; static export can't rewrite (§3.3, C6) |
+| 3 | `django-cors-headers`, `whitenoise` | **Dropped** | Same-origin via rewrites; Django serves no static files (§2.3, §8) |
+| 4 | Plain `os.environ` settings | **`django-environ`** + `.env.example`, still one settings file | Typed env casting, missing-secret errors (§2.2, C4) |
+| 5 | `trips/services/*` held everything | Split into `api/`, `services/`, `domain/`, `integrations/` | Thin views, pure testable domain, isolated HTTP clients (§2.1) |
+| 6 | Django test runner + `unittest.mock` | **pytest + pytest-django + responses** | Parametrised band-edge tables, HTTP mocking fed by samples (§6.1) |
+| 7 | No lint/format/CI | **Ruff**, **ESLint 9 + Prettier**, **pre-commit**, **GitHub Actions** | §7 |
+| 8 | `requirements.txt` | **uv** (`pyproject.toml` + `uv.lock`) | Locked installs; Render supports uv via `uv.lock` (§7.2) |
+| 9 | Dockerfile + render.yaml | **No Docker**; native builds on Vercel and Render | Nothing to compose (§7.5) |
+| 10 | Endpoints `/api/plan`, `/api/heatmap`, `/api/geocode` | `/api/trip-plans`, `/api/heatmaps`, `/api/places`, `/api/health` | Naming conventions (§5) |
+| 11 | Versions unpinned | Pinned from registries: Django **5.2.18 LTS**, TS **6.0.3**, ESLint **9.39.5** (not the newest) | Compatibility conflicts C1–C3 |
+| 12 | — | Health-check "waking server" state | Render free tier sleeps; proxy timeout unverified (§11) |
+| 13 | — | Attribution footer (Open-Meteo CC BY 4.0, © OpenStreetMap) | Open-Meteo terms; OSM data in tiles/routing/geocoding (§10) |
+| 14 | — | **C0 tooling checkpoint** added; C8/C12 rewritten for Next.js and two hosts | Build order (§5 below) |
+
+## 1. Tech stack **[changed]**
 
 | Layer | Choice | Why |
 |---|---|---|
-| Backend | **Django 5.2 + Django REST Framework** | Required by the brief; DRF serializers give clean input validation and error bodies |
-| HTTP client | `requests` | Simple, synchronous; concurrency via a small thread pool where batching needs it |
-| Cache | Django **LocMemCache** | No infra; enough for weather/geocode/route reuse within a process |
-| Database | **none** | The app is stateless: nothing to persist |
-| Frontend | **React 18 + TypeScript + Vite** | Required React; TS catches API-shape bugs; Vite is fast and minimal |
-| Map | **MapLibre GL JS** | WebGL rendering keeps the heatmap and many route/checkpoint features smooth (40 % of the grade). Largest dependency (~220 KB gzipped) — justified by GPU rendering; Leaflet's DOM/canvas layers stutter when restyling hundreds of cells per slider tick |
-| Basemap | OpenFreeMap vector tiles | Keyless. **Not probed yet** — verified at the start of C9 |
-| Styling | Plain CSS (variables) | No UI kit needed for a handful of components |
-| Tests | Django test runner (`unittest`) + `unittest.mock`; **Vitest** for a few frontend pure functions | Standard, no extra frameworks; mocks use the saved API samples |
-| Serving | Django + **WhiteNoise** serves the built React app; **gunicorn** | One deployable, one URL, no CORS in production |
-| Hosting | Docker image on Render (or similar) | Single container; free tier works. Needs your account — see open questions |
+| Backend | **Django 5.2.18 LTS + DRF 3.18.3** | Required by the brief; 5.2 is the series every dependency supports (RESEARCH C3) |
+| Settings | **django-environ 0.14.0**, one `settings.py` | 12-factor env config; no environment-specific code (C4) |
+| HTTP client | `requests` 2.34.2 | Simple; thread pool for parallel weather batches |
+| Cache | Django **LocMemCache** | Per-process, enough for an assessment; Redis noted as upgrade |
+| Database | **none** | Stateless |
+| App server | gunicorn 26.2.0 | Render start command |
+| Python tooling | **uv 0.13.1**, Python 3.12 | Locked, fast installs; Render-native |
+| Frontend | **Next.js 16.4.2, React 19.3.1, TypeScript 6.0.3** | Requested stack; TS 6 for typescript-eslint compatibility (C1) |
+| Map | **maplibre-gl 6.14.0**, used directly | WebGL; imperative `setPaintProperty` keeps the slider smooth (40 % of grade) |
+| Basemap | OpenFreeMap vector tiles | Keyless — **probe at C9** |
+| Styling | Tailwind CSS 4.3.3 (create-next-app default) | Pending your answer (RESEARCH Q3) |
+| Tests | pytest 9.1.1 + pytest-django 4.14.0 + responses 0.26.3; Vitest 5.0.5 + React Testing Library 16.3.3 + jsdom 30.1.3 | §6 of RESEARCH |
+| Quality | Ruff 0.17.1; ESLint 9.39.5 + eslint-config-next 16.4.2 + Prettier 3.9.10; pre-commit 4.7.0; GitHub Actions | §7 of RESEARCH |
+| Hosting | **Vercel** (frontend) + **Render** free web service (backend) | Pending your answer (RESEARCH Q1) |
 
-No heavy installs beyond these. The draft code moved to scratchpad in Phase 0 is **not** reused wholesale;
-pieces (risk rules, geometry helpers) will be rewritten checkpoint by checkpoint against API_NOTES.md.
+The draft code moved to scratchpad in Phase 0 is not reused wholesale; pieces are rewritten per checkpoint.
 
-## 2. Folder structure
+## 2. Folder structure **[changed]**
 
 ```text
 my-app/
-├── ASSESSMENT.md  API_NOTES.md  PLAN.md  README.md
-├── Dockerfile  render.yaml  .env.example
-├── scripts/                     probe + tuning scripts, samples/ (Phase 1)
+├── ASSESSMENT.md  API_NOTES.md  RESEARCH.md  PLAN.md  README.md
+├── .pre-commit-config.yaml
+├── .github/workflows/ci.yml            backend job + frontend job
+├── scripts/                            probes, tuning, samples/ (Phases 1–2)
 ├── backend/
-│   ├── manage.py  requirements.txt
-│   ├── config/                  settings.py, urls.py, wsgi.py
-│   └── trips/
-│       ├── api/                 serializers.py, views.py, urls.py   (HTTP only, no business logic)
-│       ├── services/
-│       │   ├── geo.py           haversine, cumulative miles, interpolation, slicing, simplification
-│       │   ├── risk.py          threshold table + load rules (pure functions)
-│       │   ├── checkpoints.py   sampling every N miles + ETA per checkpoint
-│       │   ├── routing.py       OSRM client + town-snapped via-point alternatives
-│       │   ├── geocoding.py     Photon search + reverse (town lookup)
-│       │   ├── weather.py       Open-Meteo client: batching, normalisation, retry, cache
-│       │   ├── recommend.py     route summaries, ranking, explanation
-│       │   ├── heatmap.py       corridor grid + 0–48 h risk per cell
-│       │   └── planner.py       orchestrates a plan (routes → checkpoints → weather → risk → ranking)
-│       └── tests/
-│           ├── fixtures/        trimmed copies of scripts/samples used as mocks
-│           └── test_*.py
+│   ├── pyproject.toml  uv.lock  .python-version  .env.example  manage.py
+│   ├── config/                         settings.py, urls.py, wsgi.py
+│   ├── trips/
+│   │   ├── api/                        serializers.py, views.py, exception_handler.py, urls.py
+│   │   ├── services/                   trip_planning.py, heatmap.py
+│   │   ├── domain/                     risk.py, geo.py, checkpoints.py, ranking.py
+│   │   ├── integrations/               http.py, osrm.py, open_meteo.py, photon.py
+│   │   └── exceptions.py
+│   └── tests/                          conftest.py, fixtures/, domain/, integrations/, services/, api/
 └── frontend/
-    ├── index.html  package.json  vite.config.ts
+    ├── package.json  next.config.ts  eslint.config.mjs  .prettierrc.json  vitest.config.mts  .env.example
     └── src/
-        ├── api/                 client.ts (fetch + error mapping), types.ts (response types)
-        ├── components/          TripForm, PlaceInput, RouteList, RouteCard, MapView,
-        │                        CheckpointPopup, HeatmapControls, Legend, StatusBanner
-        ├── map/                 layers.ts (route/checkpoint layers), heatmap.ts (grid layer + paint)
-        ├── lib/                 risk.ts (labels/colours), format.ts (miles, durations, times)
-        ├── App.tsx  main.tsx  styles.css
+        ├── app/                        layout.tsx, page.tsx, error.tsx, globals.css
+        ├── components/                 trip-planner/, routes/, map/, heatmap/
+        ├── hooks/                      use-trip-plan.ts, use-heatmap.ts, use-place-search.ts, use-backend-health.ts
+        ├── lib/                        api/client.ts, api/endpoints.ts, risk.ts, format.ts
+        ├── types/api.ts
+        └── test/fixtures/              our own API responses captured from backend tests
 ```
 
-## 3. Data flow
+## 3. Data flow **[changed]**
 
 ```text
- Browser (React)                       Django                                  Third-party
- ───────────────                       ──────                                  ───────────
- PlaceInput ──GET /api/geocode?q=──▶ geocoding.search ──────────────────────▶ Photon /api (bbox N. America)
-            ◀── [{label, lat, lon}] ◀─ normalise optional fields, cache 24 h
+ Browser                Next.js (Vercel)          Django (Render)                        Third-party
+ ───────                ────────────────          ───────────────                        ───────────
+ page load ──GET /api/health──▶ rewrite ──▶ HealthApi  (wakes a sleeping Render instance)
 
- TripForm ──POST /api/plan─────────▶ serializer validates input
-   {origin, destination,               planner.plan_trip
-    departure (UTC ISO), load_lb,        1. routing.get_routes ──────────────▶ OSRM alternatives=3
-    interval_mi: 10|25|50}                  if < 3: offset via-points ──────▶ Photon /reverse (town)
-                                                     route through town ────▶ OSRM alternatives=false
-                                            drop dup (>0.8 overlap) / detour (>1.5×)
-                                         2. checkpoints.build: every N mi, ETA = departure
-                                            + cumulative (capped) segment time
-                                         3. weather.fetch_hourly(all checkpoints) ─▶ Open-Meteo
-                                            batches ≤200, 4 parallel, snapped coords, cached
-                                         4. risk.assess(value at hour nearest ETA, load)
-                                         5. recommend.rank + explain
-                                         6. simplify geometry, split into risk segments
+ PlaceInput ──GET /api/places?q=──▶ rewrite ──▶ PlaceSearchApi
+                                                  → integrations.photon.search ─────────▶ Photon /api (bbox)
+
+ TripForm ──POST /api/trip-plans──▶ rewrite ──▶ TripPlanCreateApi
+   {origin, destination,                          input serializer validates
+    departure (UTC ISO),                          services.trip_planning.plan_trip
+    load_lb, interval_mi}                           1. integrations.osrm.routes ────────▶ OSRM alternatives=3
+                                                       if < 3: photon.nearest_town ─────▶ Photon /reverse
+                                                               osrm.route_via ──────────▶ OSRM alternatives=false
+                                                       domain filters: overlap > 0.8, detour > 1.5×
+                                                    2. domain.checkpoints: every N mi, ETA per checkpoint
+                                                    3. integrations.open_meteo.hourly ──▶ Open-Meteo (≤200/batch, 4 parallel, cached)
+                                                    4. domain.risk.assess at ETA hour + load rules
+                                                    5. domain.ranking: rank + explanation
+                                                    6. domain.geo: simplify, split into risk segments
             ◀── routes[], checkpoints[], summaries, recommendation, warnings
 
- MapView draws routes + checkpoints; RouteList shows summaries and the recommendation.
+ HeatmapControls ──POST /api/heatmaps──▶ rewrite ──▶ HeatmapCreateApi
+   {departure, load_lb, points}                     services.heatmap.build_heatmap (grid ≤ ~200 cells)
+                                                    integrations.open_meteo.hourly (49 h) ─▶ Open-Meteo
+            ◀── {start, cell_deg, cells: [{lon, lat, risk[49], wind[49], rain[49], snow[49]}]}
 
- (in parallel, after the plan arrives)
- HeatmapControls ──POST /api/heatmap─▶ heatmap.build_grid(checkpoint coords)
-   {departure, load_lb,                  cell size scaled so grid ≤ ~200 cells
-    points: checkpoint coords}           weather.fetch_hourly(cells, 49 h) ──▶ Open-Meteo
-            ◀── {start, cell_deg, cells:[{lon, lat, risk[49], wind[49], rain[49], snow[49]}]}
-
- Slider (0–48 h) changes only a MapLibre paint expression → no refetch, no React re-render of the map.
+ Slider 0–48 h → MapLibre setPaintProperty only (no request, no React re-render of the map)
 ```
 
-### API contract (draft)
+### API contract (draft) **[changed: paths only]**
 
-`POST /api/plan` → `200`
+`POST /api/trip-plans` → `200`
 
 ```text
 {
-  departure: ISO string, load_lb: number, interval_mi: number,
+  departure, load_lb, interval_mi,
   recommended_route_id: "A",
   recommendation: { reason: "Fewest Severe miles (0 vs 20 on B)", ranking: ["A","C","B"] },
   warnings: ["Only 2 distinct routes found for this corridor"],
   routes: [{
-    id: "A", label: "Fastest", via_town: null | "Franklin",
-    distance_mi, duration_s, arrival: ISO,
-    summary: { miles_by_level: {low, moderate, high, severe, no_travel}, avg_risk: number, max_level },
-    geometry: [[lon, lat], …],                                  simplified
-    segments: [{ level: 0-4, coordinates: [[lon, lat], …] }],   coloured line pieces
+    id, label, via_town, distance_mi, duration_s, arrival,
+    summary: { miles_by_level: {low, moderate, high, severe, no_travel}, avg_risk, max_level },
+    geometry: [[lon, lat], …],
+    segments: [{ level, coordinates }],
     checkpoints: [{ mile, lon, lat, eta, covers: [start_mi, end_mi],
                     wind_mph, rain_in_hr, snow_in_hr,
-                    level, wind_level, rain_level, snow_level, reasons: [string] }]
+                    level, wind_level, rain_level, snow_level, reasons }]
   }]
 }
 ```
 
-`GET /api/geocode?q=dal` → `[{ label: "Dallas, Texas, US", lat, lon }]`
+`GET /api/places?q=dal` → `[{ label, lat, lon }]` · `GET /api/health` → `{ "status": "ok" }`
+
+Error body (all endpoints): `{ "message": str, "extra": {...} }` **[changed]** (HackSoft shape; field
+errors under `extra.fields`).
 
 ## 4. Errors, loading, caching, missing keys
 
-### Errors
-- **Input validation** (DRF serializer) → `400 { errors: { field: [msg] } }`, shown next to the field.
-  Checks: both places present, distinct (≥ 1 mi apart), load 1–80,000 lb, interval ∈ {10, 25, 50},
-  departure not more than 1 h in the past.
-- **Forecast horizon** → after routing, if `departure + longest trip` or `departure + 48 h` passes the
-  ~15-day horizon → `422` with a message telling the user the latest allowed departure.
-- **No route** (OSRM `NoRoute` / `InvalidValue`) → `422 "No drivable route between these places"`.
-- **Provider failures** (timeouts, 5xx, 414, 429, unexpected shapes) → `502 { error, provider }`,
-  plain-English message ("Weather service is unavailable, try again shortly"). We map by **status code**,
-  never by parsing provider error bodies (they are inconsistent, see API_NOTES).
-- **Retries:** network errors, 429 and 5xx retried up to 3× with backoff (a TLS timeout was observed once).
-- **Weather is all-or-nothing for a plan:** a route without weather can't be risk-scored, so a partial
-  failure fails the plan rather than showing misleading "Low" risk.
-- **Heatmap failure does not fail the plan:** routes stay visible; the heatmap panel shows a retry button.
-- **Fewer than 3 routes:** not an error. Shown as a warning banner explaining the corridor has no
-  distinct reasonable alternative.
+### Errors **[changed: mechanism]**
+- One `ApplicationError` hierarchy in `trips/exceptions.py`, mapped by a custom DRF exception handler:
+  validation → **400**, `NoRouteError` / `ForecastHorizonError` → **422**, `ProviderError` → **502**.
+- Validation checks: both places present and ≥ 1 mi apart, load 1–80,000 lb, interval ∈ {10, 25, 50},
+  departure no more than 1 h in the past; after routing, `departure + longest trip` and
+  `departure + 48 h` must fit the ~15-day horizon.
+- Retries: network errors, 429 and 5xx, up to 3× with backoff. Errors are mapped by status code,
+  never by parsing provider bodies.
+- Weather is all-or-nothing for a plan. A heatmap failure never fails the plan.
+- Fewer than 3 routes is a warning, not an error.
 
-### Loading states
-- Plan request takes ~4–12 s (API_NOTES). The form disables, the button shows a spinner, and a status
-  line explains what's happening ("Finding routes and forecasts — this takes a few seconds").
-- Heatmap loads after the routes are drawn, with its own spinner on the slider panel.
-- Geocode autocomplete: 300 ms debounce, min 3 characters, stale responses discarded.
+### Loading states **[changed: + health]**
+- **Waking state:** `use-backend-health` calls `/api/health` on page load. While it hasn't answered,
+  the form shows "Waking the server (free hosting sleeps after 15 min)…" and retries. The submit
+  button stays disabled until it answers.
+- Plan request (~4–12 s): disabled form, spinner, status line.
+- Heatmap: loads after routes are drawn, own spinner.
+- Autocomplete: 300 ms debounce, ≥ 3 characters, `AbortController` cancels stale requests.
 
-### Caching (server, LocMemCache)
+### Caching
 | What | Key | TTL |
 |---|---|---|
 | Weather series | snapped coord (0.05°) + window start hour + length | 15 min |
-| Geocode search | normalised query | 24 h |
+| Place search | normalised query | 24 h |
 | Town lookup | rounded via-point (0.05°) | 24 h |
 | Route set | rounded origin/destination (4 dp) | 1 h |
 
-The browser keeps the current plan in memory only; no local storage.
+### Missing keys / env **[changed]**
+- Backend: `DJANGO_SECRET_KEY` is required in production (django-environ raises
+  `ImproperlyConfigured` when missing). Provider URLs and `OPEN_METEO_API_KEY` are optional.
+- Frontend: `BACKEND_URL` only, server-side. **No `NEXT_PUBLIC_*` variables.**
+- Both sides ship `.env.example`; `.env*` is git-ignored.
 
-### Missing keys
-All providers are keyless, so nothing is required. `OPEN_METEO_API_KEY` is optional: when set, the
-client switches to the paid host. Startup logs which hosts are in use. Provider URLs are configurable
-in `.env` (see `.env.example`), e.g. to point at a self-hosted OSRM.
-
-## 5. Build order (checkpoints)
+## 5. Build order (checkpoints) **[changed]**
 
 Each checkpoint ends with: run it, confirm it works, commit, report to you.
 
 | # | Checkpoint | How it's tested on its own | Covers |
 |---|---|---|---|
-| **C1** | Backend skeleton: Django + DRF, settings from env, `GET /api/health` | `curl /api/health` → `{"status":"ok"}` | — |
-| **C2** | `risk.py`: threshold table + load rules | Unit tests for every band edge (24.9/25/34.9/35…, 0.10/0.25/0.50/1.00/1.01, snow edges) and each load rule incl. 30,000 vs 30,001 lb | R7, R8 |
-| **C3** | `geo.py` + `checkpoints.py`: sampling every N mi, coverage, ETA with speed cap | Unit tests on the saved Dallas–Houston OSRM sample: counts at 10/25/50 mi, coverage sums to route length, ETA at destination equals route duration | R5, R6 |
-| **C4** | `weather.py`: batching (≤200), object-vs-array normalisation, null handling, retry, cache | Unit tests with fixtures: single + multi responses, 400/414/timeout mocks, cache hit avoids HTTP | R6 |
-| **C5** | `geocoding.py` + `routing.py`: Photon search/reverse, OSRM + town-snapped alternatives + filters; `GET /api/geocode` | Unit tests with fixtures (dup and detour rejected, < 3 routes path); manual run on Dallas–Houston and Seattle–Portland | R1, R4 |
-| **C6** | `recommend.py` + `planner.py` + `POST /api/plan` | Unit tests: lexicographic ranking (no-travel → severe → high → avg → time), ties, explanation text; API test with all providers mocked; one real `curl` | R2, R3, R9 |
-| **C7** | `heatmap.py` + `POST /api/heatmap`: adaptive grid ≤ ~200 cells, 49 hourly risk levels | Unit tests: cell count bounded for a 1,000 mi route, levels match `risk.py`; real `curl` timing | R11 |
-| **C8** | Frontend scaffold, typed API client, TripForm with autocomplete, datetime, load, interval | Vitest for formatters; manual: form submits and shows raw result | R1–R3 |
-| **C9** | Map: probe basemap tiles, draw routes (risk-coloured segments), checkpoints with popups, route cards + recommendation, selection sync | Manual on 3 trips; check every checkpoint popup shows ETA + values + reason | R10 |
-| **C10** | Heatmap layer + 0–48 h slider + play button + legend | Manual: scrub the slider on Chicago–Denver, confirm no dropped frames in DevTools Performance; no network calls while scrubbing | R11, R12 |
-| **C11** | Error / empty / loading states end-to-end | Manual: offline, invalid place, too-far departure, one-route corridor | R12, R16 |
-| **C12** | Dockerfile + render config; production build served by Django | `docker build && docker run`, open localhost; then deploy on your account | R13, R14 |
-| **C13** | Docs: README (setup, architecture, decisions, limitations), Loom talking points | Fresh-clone setup following README only | R15, R16 |
+| **C0** **[new]** | Tooling: `backend/pyproject.toml` (uv), Ruff config, pytest config; `.pre-commit-config.yaml`; CI workflow with the backend job | `uv run ruff check`, `uv run pytest` (0 tests) green locally; `pre-commit run --all-files` | R13, R16 |
+| **C1** | Django skeleton: env settings, DRF, exception handler, `GET /api/health` | pytest API test + `curl /api/health` | — |
+| **C2** | `domain/risk.py` | Parametrised tests for every band edge and each load rule (30,000 vs 30,001 lb, etc.) | R7, R8 |
+| **C3** | `domain/geo.py` + `domain/checkpoints.py` | Tests on the Dallas–Houston sample: counts at 10/25/50 mi, coverage sums to length, ETA at destination = route duration | R5, R6 |
+| **C4** | `integrations/http.py` + `open_meteo.py` | `responses` tests: object vs list, `hourly_units` conversion, null handling, 400/414/timeout, retry, cache hit | R6 |
+| **C5** | `integrations/osrm.py`, `photon.py` + alternative-route logic + `GET /api/places` | `responses` tests with samples: duplicate/detour rejected, < 3 routes path; manual Dallas–Houston + Seattle–Portland | R1, R4 |
+| **C6** | `domain/ranking.py` + `services/trip_planning.py` + `POST /api/trip-plans` | Ranking tests (no-travel → severe → high → avg → time, ties, explanation); API test with providers mocked; one real call | R2, R3, R9 |
+| **C7** | `services/heatmap.py` + `POST /api/heatmaps` | Grid bounded for a 1,000 mi route; levels match `risk.py`; real call timing | R11 |
+| **C8** **[changed]** | Next.js scaffold (`create-next-app` with the RESEARCH §3.1 flags), pin TS 6.0.3 / ESLint 9.39.5, Prettier, Vitest; rewrites to Django; typed API client; health hook; TripForm + autocomplete; CI frontend job | Vitest for `format.ts` and `client.ts`; manual: form submits through the rewrite and shows the raw result | R1–R3 |
+| **C9** | Map: probe OpenFreeMap; MapLibre v6 worker under Turbopack; routes (risk-coloured segments), checkpoints + popups, route cards + recommendation, selection sync, attribution footer | Manual on 3 trips; component tests for route card; `next build` succeeds | R10 |
+| **C10** | Heatmap layer + 0–48 h slider + play + legend | Scrub on Chicago–Denver with DevTools Performance (no long frames); no network while scrubbing | R11, R12 |
+| **C11** | Error / empty / loading / waking states end-to-end | Manual: backend stopped, invalid place, too-far departure, one-route corridor, cold start | R12, R16 |
+| **C12** **[changed]** | Deploy: Render web service (root `backend/`, `uv sync --locked`, gunicorn, `UV_VERSION`), Vercel project (root `frontend/`, `BACKEND_URL`) | Open the Vercel URL after Render has slept; plan a trip | R13, R14 |
+| **C13** | Docs: README (setup, architecture, decisions, limitations), Loom talking points | Fresh clone following README only | R15, R16 |
 
-Backend first (C1–C7) so the logic that carries 40 % of the grade is tested before any UI exists.
+Backend first (C0–C7), so the 40 % logic is tested before any UI exists.
 
 ## 6. Risks and open questions
 
-**Need your decision**
-1. **Hosting account.** I can't create accounts or deploy for you. Render free tier sleeps after
-   inactivity (30–60 s cold start on the reviewer's first visit). Is Render OK, or do you prefer another
-   host (Railway, Fly.io, a VPS)?
-2. **Single-corridor trips** (e.g. Seattle–Portland). Options:
-   (a) show fewer than 3 routes with an explanation — *recommended, most honest*;
-   (b) add a relaxed second pass (overlap ≤ 0.9) that may yield a near-duplicate third route.
-3. **Heatmap metric toggle** (Risk / Wind / Rain / Snow). Cheap since the data is already fetched, but
-   it's an extra. Include it in C10, or keep the heatmap risk-only?
-4. **ETA display time zone.** Plan: show in the browser's time zone with its abbreviation. Alternative is
-   each checkpoint's local zone, which needs another data source. OK with browser zone?
+**Need your decision** (details in RESEARCH.md §11)
+1. **Hosting [changed]:** Vercel + Render (two free accounts, recommended) or Render for both?
+2. **Django version [new]:** 5.2 LTS (recommended) or 6.1?
+3. **Styling [new]:** Tailwind (recommended) or CSS Modules?
+4. **E2E [new]:** one local Playwright smoke test, or skip?
+5. **Attribution footer [new]:** OK?
+6. Single-corridor trips: show fewer routes with an explanation (recommended) or add a relaxed second pass?
+7. Heatmap metric toggle (Risk / Wind / Rain / Snow): include or keep risk-only?
+8. ETA time zone: browser's zone OK?
 
 **Known risks**
-5. **Public demo servers** (OSRM, Photon) have no SLA and may be slow or down while the reviewer tests.
-   Mitigation: clear 502 message, caching, configurable URLs for a self-hosted fallback (documented).
-6. **Open-Meteo rate limit** with several reviewers at once: mitigated by caching and the bounded grid.
-   We never observed a 429, so the actual counting rule is unverified.
-7. **Truck realism:** no truck profile (height/weight restrictions ignored), no Hours-of-Service rest
-   breaks. Documented as a limitation; ETAs are driving time only.
-8. **Sustained wind vs gusts:** using sustained `wind_speed_10m` as agreed; gusts would be stricter.
-9. **Basemap tiles** (OpenFreeMap) not yet verified; if they fail I'll stop and propose an alternative.
-10. **Hourly granularity:** weather is taken at the forecast hour nearest each ETA (up to 30 min off).
+9. **Proxy timeout vs cold start [new]:** Vercel's rewrite timeout is undocumented; a ~1 min Render
+   wake-up may fail the first proxied request. Mitigated by the health-check waking state.
+10. **MapLibre v6 worker under Turbopack [new]:** documented, untested; checked first in C9.
+11. **Pinned-behind versions [new]:** TS 6, ESLint 9, Django 5.2 are deliberate (C1–C3); revisit
+    when typescript-eslint / plugins / pytest-django declare support for the newer versions.
+12. Public demo servers (OSRM, Photon) have no SLA; Photon's `osm_tag` is marked deprecated **[new]**.
+13. Open-Meteo rate limit and multi-location counting are unverified; free tier is non-commercial **[new]**.
+14. No truck profile (height/weight restrictions), no Hours-of-Service breaks; sustained wind, not gusts;
+    forecast hour nearest each ETA.
 
 ## Requirement IDs
 
