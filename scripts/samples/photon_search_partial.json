@@ -1,0 +1,162 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "R",
+        "osm_id": 2688911,
+        "osm_key": "place",
+        "osm_value": "city",
+        "type": "city",
+        "name": "Houston",
+        "county": "Harris",
+        "state": "Texas",
+        "country": "United States",
+        "countrycode": "US",
+        "extra": {
+          "admin_level": "8"
+        },
+        "extent": [
+          -95.9097419,
+          30.1103506,
+          -95.0120525,
+          29.5370705
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -95.3676974,
+          29.7589382
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "R",
+        "osm_id": 1840945,
+        "osm_key": "place",
+        "osm_value": "county",
+        "type": "county",
+        "name": "Houston",
+        "state": "Texas",
+        "country": "United States",
+        "countrycode": "US",
+        "extra": {
+          "admin_level": "6"
+        },
+        "extent": [
+          -95.7758904,
+          31.5928735,
+          -94.9580014,
+          30.9260843
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -95.390805,
+          31.3378465
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "R",
+        "osm_id": 153014,
+        "osm_key": "place",
+        "osm_value": "village",
+        "type": "city",
+        "name": "Housset",
+        "county": "Aisne",
+        "state": "Hauts-de-France",
+        "country": "France",
+        "postcode": "02250",
+        "countrycode": "FR",
+        "extra": {
+          "admin_level": "8"
+        },
+        "extent": [
+          3.6579839,
+          49.8142366,
+          3.7334235,
+          49.7740054
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          3.7086111,
+          49.795
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "R",
+        "osm_id": 2804467,
+        "osm_key": "place",
+        "osm_value": "village",
+        "type": "city",
+        "name": "Houss\u00e9ville",
+        "county": "Meurthe-et-Moselle",
+        "state": "Grand Est",
+        "country": "France",
+        "postcode": "54930",
+        "countrycode": "FR",
+        "extra": {
+          "admin_level": "8"
+        },
+        "extent": [
+          6.095153,
+          48.421176,
+          6.1359285,
+          48.3973339
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.1181,
+          48.4063
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "osm_type": "R",
+        "osm_id": 145210,
+        "osm_key": "place",
+        "osm_value": "village",
+        "type": "city",
+        "name": "Housseras",
+        "county": "Vosges",
+        "state": "Grand Est",
+        "country": "France",
+        "postcode": "88700",
+        "countrycode": "FR",
+        "extra": {
+          "admin_level": "8"
+        },
+        "extent": [
+          6.6817433,
+          48.3257523,
+          6.7824855,
+          48.2883276
+        ]
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.7126604,
+          48.3107452
+        ]
+      }
+    }
+  ]
+}

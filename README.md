@@ -1,0 +1,30 @@
+# Weather-Aware Truck Routing
+
+React + Django app that helps a truck driver pick the safest route based on forecast weather,
+load weight and travel time. See [ASSESSMENT.md](ASSESSMENT.md) for the brief and the agreed
+interpretations of ambiguous rules.
+
+> Status: API exploration. The app itself has not been built yet.
+
+## External APIs (all keyless)
+
+| Purpose | Provider |
+|---|---|
+| Routing | OSRM public demo server |
+| Weather | Open-Meteo forecast API |
+| Geocoding | Photon (komoot) |
+
+Optional URL overrides are listed in [.env.example](.env.example).
+
+## API probes
+
+Standalone scripts (Python 3 standard library only) that call every endpoint the app needs,
+plus failure cases, and save raw responses to `scripts/samples/`:
+
+```bash
+python3 scripts/probe_osrm.py
+python3 scripts/probe_open_meteo.py
+python3 scripts/probe_photon.py
+```
+
+Responses over 300 KB are saved as `*.trimmed.json` with long arrays shortened.

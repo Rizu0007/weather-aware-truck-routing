@@ -1,0 +1,61 @@
+{
+  "code": "Ok",
+  "routes": [
+    {
+      "legs": [
+        {
+          "distance": 0,
+          "annotation": {
+            "distance": [
+              0
+            ],
+            "duration": [
+              0
+            ]
+          },
+          "duration": 0,
+          "summary": "",
+          "weight": 0,
+          "steps": []
+        }
+      ],
+      "weight_name": "routability",
+      "geometry": {
+        "coordinates": [
+          [
+            -96.796754,
+            32.775944
+          ],
+          [
+            -96.796754,
+            32.775944
+          ]
+        ],
+        "type": "LineString"
+      },
+      "weight": 0,
+      "duration": 0,
+      "distance": 0
+    }
+  ],
+  "waypoints": [
+    {
+      "hint": "-ri2h7WG6I2IAAAAlgAAAAAAAAAAAAAAOv1jQl2NeEIAAAAAAAAAAIgAAACWAAAAAAAAAAAAAACEfwAArv86-ggf9AG4_jr6_CH0AQAA7w8AAAAA",
+      "location": [
+        -96.796754,
+        32.775944
+      ],
+      "name": "",
+      "distance": 86.95094004
+    },
+    {
+      "hint": "-ri2h7WG6I2IAAAAlgAAAAAAAAAAAAAAOv1jQl2NeEIAAAAAAAAAAIgAAACWAAAAAAAAAAAAAACEfwAArv86-ggf9AG4_jr6_CH0AQAA7w8AAAAA",
+      "location": [
+        -96.796754,
+        32.775944
+      ],
+      "name": "",
+      "distance": 86.95094004
+    }
+  ]
+}

@@ -1,0 +1,133 @@
+[
+  {
+    "latitude": 32.784855,
+    "longitude": -96.80359,
+    "generationtime_ms": 0.0978708267211914,
+    "utc_offset_seconds": 0,
+    "timezone": "GMT",
+    "timezone_abbreviation": "GMT",
+    "elevation": 137.0,
+    "hourly_units": {
+      "time": "iso8601",
+      "wind_speed_10m": "mp/h",
+      "rain": "inch",
+      "showers": "inch",
+      "snowfall": "inch"
+    },
+    "hourly": {
+      "time": [
+        "2026-10-17T21:00",
+        "2026-10-17T22:00",
+        "2026-10-17T23:00"
+      ],
+      "wind_speed_10m": [
+        6.2,
+        5.9,
+        2.4
+      ],
+      "rain": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "showers": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "snowfall": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "latitude": 31.495234,
+    "longitude": -96.5009,
+    "generationtime_ms": 0.051140785217285156,
+    "utc_offset_seconds": 0,
+    "timezone": "GMT",
+    "timezone_abbreviation": "GMT",
+    "elevation": 128.0,
+    "location_id": 1,
+    "hourly_units": {
+      "time": "iso8601",
+      "wind_speed_10m": "mp/h",
+      "rain": "inch",
+      "showers": "inch",
+      "snowfall": "inch"
+    },
+    "hourly": {
+      "time": [
+        "2026-10-17T21:00",
+        "2026-10-17T22:00",
+        "2026-10-17T23:00"
+      ],
+      "wind_speed_10m": [
+        10.4,
+        9.8,
+        9.8
+      ],
+      "rain": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "showers": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "snowfall": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  },
+  {
+    "latitude": 29.767237,
+    "longitude": -95.35445,
+    "generationtime_ms": 0.033736228942871094,
+    "utc_offset_seconds": 0,
+    "timezone": "GMT",
+    "timezone_abbreviation": "GMT",
+    "elevation": 20.0,
+    "location_id": 2,
+    "hourly_units": {
+      "time": "iso8601",
+      "wind_speed_10m": "mp/h",
+      "rain": "inch",
+      "showers": "inch",
+      "snowfall": "inch"
+    },
+    "hourly": {
+      "time": [
+        "2026-10-17T21:00",
+        "2026-10-17T22:00",
+        "2026-10-17T23:00"
+      ],
+      "wind_speed_10m": [
+        9.1,
+        8.6,
+        6.6
+      ],
+      "rain": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "showers": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "snowfall": [
+        0.0,
+        0.0,
+        0.0
+      ]
+    }
+  }
+]
