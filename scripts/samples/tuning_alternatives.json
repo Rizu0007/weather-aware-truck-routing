@@ -1,0 +1,338 @@
+{
+  "Dallas-Houston": {
+    "native": 1,
+    "raw": [
+      {
+        "hours": 6.03,
+        "detour": 1.43,
+        "overlap": 0.33,
+        "backtrack": 0.97,
+        "usable": true,
+        "offset": "+0.15"
+      },
+      {
+        "hours": 6.11,
+        "detour": 1.45,
+        "overlap": 0.04,
+        "backtrack": 0.97,
+        "usable": true,
+        "offset": "-0.15"
+      }
+    ],
+    "town": [
+      {
+        "hours": 5.39,
+        "detour": 1.28,
+        "overlap": 0.33,
+        "backtrack": 1.0,
+        "usable": true,
+        "offset": "+0.15 Crockett"
+      },
+      {
+        "hours": 5.11,
+        "detour": 1.21,
+        "overlap": 0.42,
+        "backtrack": 1.0,
+        "usable": true,
+        "offset": "-0.15 Franklin"
+      }
+    ],
+    "raw_total_routes": 3,
+    "town_total_routes": 3
+  },
+  "Chicago-Denver": {
+    "native": 2,
+    "raw": [
+      {
+        "hours": 21.08,
+        "detour": 1.18,
+        "overlap": 0.97,
+        "backtrack": 1.0,
+        "usable": false,
+        "offset": "+0.15"
+      },
+      {
+        "hours": 21.1,
+        "detour": 1.19,
+        "overlap": 0.62,
+        "backtrack": 1.0,
+        "usable": true,
+        "offset": "-0.15"
+      }
+    ],
+    "town": [
+      {
+        "hours": 20.92,
+        "detour": 1.18,
+        "overlap": 0.94,
+        "backtrack": 1.0,
+        "usable": false,
+        "offset": "+0.15 Burlingame"
+      },
+      {
+        "hours": 21.04,
+        "detour": 1.18,
+        "overlap": 0.62,
+        "backtrack": 1.0,
+        "usable": true,
+        "offset": "-0.15 Elk Point"
+      }
+    ],
+    "raw_total_routes": 3,
+    "town_total_routes": 3
+  },
+  "LosAngeles-Phoenix": {
+    "native": 1,
+    "raw": [
+      {
+        "hours": 24.45,
+        "detour": 3.65,
+        "overlap": 0.37,
+        "backtrack": 0.98,
+        "usable": false,
+        "offset": "+0.15"
+      },
+      {
+        "hours": 8.1,
+        "detour": 1.21,
+        "overlap": 0.65,
+        "backtrack": 1.0,
+        "usable": true,
+        "offset": "-0.15"
+      },
+      {
+        "hours": 15.54,
+        "detour": 2.32,
+        "overlap": 0.36,
+        "backtrack": 0.98,
+        "usable": false,
+        "offset": "+0.25"
+      },
+      {
+        "hours": 9.85,
+        "detour": 1.47,
+        "overlap": 0.5,
+        "backtrack": 1.0,
+        "usable": true,
+        "offset": "-0.25"
+      }
+    ],
+    "town": [
+      {
+        "hours": 9.06,
+        "detour": 1.35,
+        "overlap": 0.37,
+        "backtrack": 1.0,
+        "usable": true,
+        "offset": "+0.15 Needles"
+      },
+      {
+        "hours": 8.65,
+        "detour": 1.29,
+        "overlap": 0.4,
+        "backtrack": 1.0,
+        "usable": true,
+        "offset": "-0.15 Holtville"
+      }
+    ],
+    "raw_total_routes": 3,
+    "town_total_routes": 3
+  },
+  "Atlanta-Nashville": {
+    "native": 1,
+    "raw": [
+      {
+        "hours": 5.88,
+        "detour": 1.25,
+        "overlap": 0.59,
+        "backtrack": 0.99,
+        "usable": true,
+        "offset": "+0.15"
+      },
+      {
+        "hours": 5.55,
+        "detour": 1.18,
+        "overlap": 0.54,
+        "backtrack": 0.99,
+        "usable": true,
+        "offset": "-0.15"
+      }
+    ],
+    "town": [
+      {
+        "hours": 5.87,
+        "detour": 1.25,
+        "overlap": 0.58,
+        "backtrack": 0.99,
+        "usable": true,
+        "offset": "+0.15 Scottsboro"
+      },
+      {
+        "hours": 5.4,
+        "detour": 1.15,
+        "overlap": 0.54,
+        "backtrack": 0.99,
+        "usable": true,
+        "offset": "-0.15 Soddy-Daisy"
+      }
+    ],
+    "raw_total_routes": 3,
+    "town_total_routes": 3
+  },
+  "Seattle-Portland": {
+    "native": 1,
+    "raw": [
+      {
+        "hours": 6.16,
+        "detour": 1.79,
+        "overlap": 0.4,
+        "backtrack": 0.9,
+        "usable": false,
+        "offset": "+0.15"
+      },
+      {
+        "hours": 3.84,
+        "detour": 1.11,
+        "overlap": 0.92,
+        "backtrack": 0.97,
+        "usable": false,
+        "offset": "-0.15"
+      },
+      {
+        "hours": 7.68,
+        "detour": 2.23,
+        "overlap": 0.37,
+        "backtrack": 0.86,
+        "usable": false,
+        "offset": "+0.25"
+      },
+      {
+        "hours": 4.98,
+        "detour": 1.44,
+        "overlap": 0.89,
+        "backtrack": 0.89,
+        "usable": false,
+        "offset": "-0.25"
+      }
+    ],
+    "town": [
+      {
+        "offset": 0.15,
+        "town": null
+      },
+      {
+        "hours": 3.54,
+        "detour": 1.03,
+        "overlap": 0.99,
+        "backtrack": 0.98,
+        "usable": false,
+        "offset": "-0.15 Chehalis"
+      },
+      {
+        "offset": 0.25,
+        "town": null
+      },
+      {
+        "hours": 4.55,
+        "detour": 1.32,
+        "overlap": 0.87,
+        "backtrack": 0.87,
+        "usable": false,
+        "offset": "-0.25 Pe Ell"
+      }
+    ],
+    "raw_total_routes": 1,
+    "town_total_routes": 1
+  },
+  "NewYork-Pittsburgh": {
+    "native": 2,
+    "raw": [
+      {
+        "hours": 8.76,
+        "detour": 1.19,
+        "overlap": 0.46,
+        "backtrack": 0.99,
+        "usable": true,
+        "offset": "+0.15"
+      }
+    ],
+    "town": [
+      {
+        "hours": 8.71,
+        "detour": 1.18,
+        "overlap": 0.47,
+        "backtrack": 0.96,
+        "usable": true,
+        "offset": "+0.15 Spring Grove"
+      }
+    ],
+    "raw_total_routes": 3,
+    "town_total_routes": 3
+  },
+  "SaltLake-Denver": {
+    "native": 2,
+    "raw": [
+      {
+        "hours": 13.24,
+        "detour": 1.47,
+        "overlap": 0.33,
+        "backtrack": 0.99,
+        "usable": true,
+        "offset": "+0.15"
+      }
+    ],
+    "town": [
+      {
+        "hours": 10.45,
+        "detour": 1.16,
+        "overlap": 0.47,
+        "backtrack": 0.99,
+        "usable": true,
+        "offset": "+0.15 Baggs"
+      }
+    ],
+    "raw_total_routes": 3,
+    "town_total_routes": 3
+  },
+  "KansasCity-StLouis": {
+    "native": 2,
+    "raw": [
+      {
+        "hours": 6.4,
+        "detour": 1.35,
+        "overlap": 0.86,
+        "backtrack": 0.94,
+        "usable": false,
+        "offset": "+0.15"
+      },
+      {
+        "hours": 6.4,
+        "detour": 1.35,
+        "overlap": 0.59,
+        "backtrack": 1.0,
+        "usable": true,
+        "offset": "-0.15"
+      }
+    ],
+    "town": [
+      {
+        "hours": 6.09,
+        "detour": 1.29,
+        "overlap": 0.87,
+        "backtrack": 0.92,
+        "usable": false,
+        "offset": "+0.15 Moberly"
+      },
+      {
+        "hours": 6.21,
+        "detour": 1.31,
+        "overlap": 0.59,
+        "backtrack": 1.0,
+        "usable": true,
+        "offset": "-0.15 Eldon"
+      }
+    ],
+    "raw_total_routes": 3,
+    "town_total_routes": 3
+  }
+}

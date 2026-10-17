@@ -1,0 +1,714 @@
+{
+  "Dallas-Houston": {
+    "crow_miles": 224.8,
+    "native_alternatives": 1,
+    "native_routes": [
+      {
+        "miles": 238.3,
+        "hours": 4.22
+      }
+    ],
+    "response_kb": 62,
+    "via_candidates": [
+      {
+        "offset": 0.1,
+        "miles": 279.9,
+        "hours": 5.76,
+        "detour_ratio": 1.365,
+        "overlap_with_native": 0.783,
+        "backtrack_ratio": 0.976,
+        "via_snap_distance_m": 332,
+        "via_road": ""
+      },
+      {
+        "offset": -0.1,
+        "miles": 287.8,
+        "hours": 5.79,
+        "detour_ratio": 1.371,
+        "overlap_with_native": 0.407,
+        "backtrack_ratio": 0.971,
+        "via_snap_distance_m": 1558,
+        "via_road": ""
+      },
+      {
+        "offset": 0.2,
+        "miles": 286.2,
+        "hours": 5.79,
+        "detour_ratio": 1.372,
+        "overlap_with_native": 0.325,
+        "backtrack_ratio": 0.969,
+        "via_snap_distance_m": 136,
+        "via_road": ""
+      },
+      {
+        "offset": -0.2,
+        "miles": 279.7,
+        "hours": 5.66,
+        "detour_ratio": 1.342,
+        "overlap_with_native": 0.039,
+        "backtrack_ratio": 0.992,
+        "via_snap_distance_m": 482,
+        "via_road": ""
+      },
+      {
+        "offset": 0.3,
+        "miles": 301.5,
+        "hours": 6.27,
+        "detour_ratio": 1.487,
+        "overlap_with_native": 0.014,
+        "backtrack_ratio": 0.979,
+        "via_snap_distance_m": 392,
+        "via_road": ""
+      },
+      {
+        "offset": -0.3,
+        "miles": 298.7,
+        "hours": 5.68,
+        "detour_ratio": 1.345,
+        "overlap_with_native": 0.016,
+        "backtrack_ratio": 0.995,
+        "via_snap_distance_m": 380,
+        "via_road": "County Road 116"
+      }
+    ],
+    "speed": {
+      "osrm_hours": 4.21,
+      "share_miles_over_65": 0.0,
+      "capped_hours": {
+        "60": 4.21,
+        "65": 4.21,
+        "70": 4.21
+      }
+    },
+    "checkpoints_fastest_route": {
+      "10": 25,
+      "25": 11,
+      "50": 6
+    }
+  },
+  "Chicago-Denver": {
+    "crow_miles": 918.2,
+    "native_alternatives": 2,
+    "native_routes": [
+      {
+        "miles": 1005.1,
+        "hours": 17.8
+      },
+      {
+        "miles": 1115.7,
+        "hours": 19.93
+      }
+    ],
+    "response_kb": 532,
+    "via_candidates": [
+      {
+        "offset": 0.1,
+        "miles": 1117.4,
+        "hours": 20.92,
+        "detour_ratio": 1.175,
+        "overlap_with_native": 0.838,
+        "backtrack_ratio": 0.998,
+        "via_snap_distance_m": 252,
+        "via_road": "246 Road"
+      },
+      {
+        "offset": -0.1,
+        "miles": 1083.9,
+        "hours": 19.86,
+        "detour_ratio": 1.116,
+        "overlap_with_native": 0.775,
+        "backtrack_ratio": 1.0,
+        "via_snap_distance_m": 224,
+        "via_road": "23 Road"
+      },
+      {
+        "offset": 0.2,
+        "miles": 1200.4,
+        "hours": 21.86,
+        "detour_ratio": 1.228,
+        "overlap_with_native": 0.791,
+        "backtrack_ratio": 0.986,
+        "via_snap_distance_m": 161,
+        "via_road": ""
+      },
+      {
+        "offset": -0.2,
+        "miles": 1209.7,
+        "hours": 22.62,
+        "detour_ratio": 1.271,
+        "overlap_with_native": 0.206,
+        "backtrack_ratio": 0.998,
+        "via_snap_distance_m": 343,
+        "via_road": "Cardinal Street"
+      },
+      {
+        "offset": 0.3,
+        "miles": 1317.7,
+        "hours": 24.18,
+        "detour_ratio": 1.358,
+        "overlap_with_native": 0.482,
+        "backtrack_ratio": 0.998,
+        "via_snap_distance_m": 2332,
+        "via_road": ""
+      },
+      {
+        "offset": -0.3,
+        "miles": 1347.0,
+        "hours": 25.66,
+        "detour_ratio": 1.441,
+        "overlap_with_native": 0.191,
+        "backtrack_ratio": 0.996,
+        "via_snap_distance_m": 857,
+        "via_road": "452nd Avenue"
+      }
+    ],
+    "speed": {
+      "osrm_hours": 17.79,
+      "share_miles_over_65": 0.0,
+      "capped_hours": {
+        "60": 17.8,
+        "65": 17.79,
+        "70": 17.79
+      }
+    },
+    "checkpoints_fastest_route": {
+      "10": 102,
+      "25": 42,
+      "50": 22
+    }
+  },
+  "LosAngeles-Phoenix": {
+    "crow_miles": 356.8,
+    "native_alternatives": 1,
+    "native_routes": [
+      {
+        "miles": 372.7,
+        "hours": 6.7
+      }
+    ],
+    "response_kb": 96,
+    "via_candidates": [
+      {
+        "offset": 0.1,
+        "miles": 501.4,
+        "hours": 24.51,
+        "detour_ratio": 3.656,
+        "overlap_with_native": 0.358,
+        "backtrack_ratio": 0.998,
+        "via_snap_distance_m": 1345,
+        "via_road": "Water Road"
+      },
+      {
+        "offset": -0.1,
+        "miles": 428.7,
+        "hours": 17.16,
+        "detour_ratio": 2.559,
+        "overlap_with_native": 0.665,
+        "backtrack_ratio": 0.999,
+        "via_snap_distance_m": 10519,
+        "via_road": "Ted Kipf Road"
+      },
+      {
+        "offset": 0.2,
+        "miles": 485.8,
+        "hours": 16.24,
+        "detour_ratio": 2.422,
+        "overlap_with_native": 0.376,
+        "backtrack_ratio": 0.996,
+        "via_snap_distance_m": 2839,
+        "via_road": "Water Road"
+      },
+      {
+        "offset": -0.2,
+        "miles": 461.5,
+        "hours": 8.96,
+        "detour_ratio": 1.337,
+        "overlap_with_native": 0.395,
+        "backtrack_ratio": 1.0,
+        "via_snap_distance_m": 135,
+        "via_road": "Miller Road"
+      },
+      {
+        "offset": 0.3,
+        "miles": 505.8,
+        "hours": 10.99,
+        "detour_ratio": 1.639,
+        "overlap_with_native": 0.097,
+        "backtrack_ratio": 0.994,
+        "via_snap_distance_m": 505,
+        "via_road": ""
+      },
+      {
+        "offset": -0.3,
+        "miles": 512.4,
+        "hours": 10.3,
+        "detour_ratio": 1.535,
+        "overlap_with_native": 0.34,
+        "backtrack_ratio": 0.993,
+        "via_snap_distance_m": 5446,
+        "via_road": ""
+      }
+    ],
+    "speed": {
+      "osrm_hours": 6.69,
+      "share_miles_over_65": 0.0,
+      "capped_hours": {
+        "60": 6.69,
+        "65": 6.69,
+        "70": 6.69
+      }
+    },
+    "checkpoints_fastest_route": {
+      "10": 39,
+      "25": 16,
+      "50": 9
+    }
+  },
+  "Atlanta-Nashville": {
+    "crow_miles": 214.9,
+    "native_alternatives": 1,
+    "native_routes": [
+      {
+        "miles": 248.7,
+        "hours": 4.7
+      }
+    ],
+    "response_kb": 92,
+    "via_candidates": [
+      {
+        "offset": 0.1,
+        "miles": 298.3,
+        "hours": 5.77,
+        "detour_ratio": 1.226,
+        "overlap_with_native": 0.896,
+        "backtrack_ratio": 0.922,
+        "via_snap_distance_m": 267,
+        "via_road": "County Road 46"
+      },
+      {
+        "offset": -0.1,
+        "miles": 267.6,
+        "hours": 5.11,
+        "detour_ratio": 1.086,
+        "overlap_with_native": 0.969,
+        "backtrack_ratio": 0.976,
+        "via_snap_distance_m": 166,
+        "via_road": ""
+      },
+      {
+        "offset": 0.2,
+        "miles": 304.2,
+        "hours": 6.57,
+        "detour_ratio": 1.397,
+        "overlap_with_native": 0.561,
+        "backtrack_ratio": 0.948,
+        "via_snap_distance_m": 171,
+        "via_road": "Prospect Road"
+      },
+      {
+        "offset": -0.2,
+        "miles": 287.7,
+        "hours": 6.09,
+        "detour_ratio": 1.295,
+        "overlap_with_native": 0.43,
+        "backtrack_ratio": 0.991,
+        "via_snap_distance_m": 148,
+        "via_road": ""
+      },
+      {
+        "offset": 0.3,
+        "miles": 304.2,
+        "hours": 6.46,
+        "detour_ratio": 1.373,
+        "overlap_with_native": 0.007,
+        "backtrack_ratio": 0.995,
+        "via_snap_distance_m": 68,
+        "via_road": "Glendale Road"
+      },
+      {
+        "offset": -0.3,
+        "miles": 311.5,
+        "hours": 6.67,
+        "detour_ratio": 1.418,
+        "overlap_with_native": 0.291,
+        "backtrack_ratio": 0.993,
+        "via_snap_distance_m": 208,
+        "via_road": "County Road 188"
+      }
+    ],
+    "speed": {
+      "osrm_hours": 4.69,
+      "share_miles_over_65": 0.0,
+      "capped_hours": {
+        "60": 4.69,
+        "65": 4.69,
+        "70": 4.69
+      }
+    },
+    "checkpoints_fastest_route": {
+      "10": 26,
+      "25": 11,
+      "50": 6
+    }
+  },
+  "Seattle-Portland": {
+    "crow_miles": 144.9,
+    "native_alternatives": 1,
+    "native_routes": [
+      {
+        "miles": 174.0,
+        "hours": 3.45
+      }
+    ],
+    "response_kb": 64,
+    "via_candidates": [
+      {
+        "offset": 0.1,
+        "miles": 206.2,
+        "hours": 4.66,
+        "detour_ratio": 1.351,
+        "overlap_with_native": 0.423,
+        "backtrack_ratio": 0.982,
+        "via_snap_distance_m": 1758,
+        "via_road": "Davis Lake Road"
+      },
+      {
+        "offset": -0.1,
+        "miles": 184.8,
+        "hours": 3.78,
+        "detour_ratio": 1.096,
+        "overlap_with_native": 0.967,
+        "backtrack_ratio": 0.957,
+        "via_snap_distance_m": 159,
+        "via_road": ""
+      },
+      {
+        "offset": 0.2,
+        "miles": 241.6,
+        "hours": 5.61,
+        "detour_ratio": 1.625,
+        "overlap_with_native": 0.385,
+        "backtrack_ratio": 0.883,
+        "via_snap_distance_m": 394,
+        "via_road": "Cline Road"
+      },
+      {
+        "offset": -0.2,
+        "miles": 190.4,
+        "hours": 3.9,
+        "detour_ratio": 1.131,
+        "overlap_with_native": 0.944,
+        "backtrack_ratio": 0.932,
+        "via_snap_distance_m": 139,
+        "via_road": ""
+      },
+      {
+        "offset": 0.3,
+        "miles": 270.0,
+        "hours": 6.82,
+        "detour_ratio": 1.976,
+        "overlap_with_native": 0.313,
+        "backtrack_ratio": 0.934,
+        "via_snap_distance_m": 308,
+        "via_road": "Forest Road 2100-107"
+      },
+      {
+        "offset": -0.3,
+        "miles": 226.9,
+        "hours": 5.97,
+        "detour_ratio": 1.731,
+        "overlap_with_native": 0.846,
+        "backtrack_ratio": 0.864,
+        "via_snap_distance_m": 450,
+        "via_road": ""
+      }
+    ],
+    "speed": {
+      "osrm_hours": 3.44,
+      "share_miles_over_65": 0.0,
+      "capped_hours": {
+        "60": 3.44,
+        "65": 3.44,
+        "70": 3.44
+      }
+    },
+    "checkpoints_fastest_route": {
+      "10": 19,
+      "25": 8,
+      "50": 5
+    }
+  },
+  "NewYork-Pittsburgh": {
+    "crow_miles": 314.8,
+    "native_alternatives": 2,
+    "native_routes": [
+      {
+        "miles": 370.0,
+        "hours": 7.35
+      },
+      {
+        "miles": 370.2,
+        "hours": 7.68
+      }
+    ],
+    "response_kb": 405,
+    "via_candidates": [
+      {
+        "offset": 0.1,
+        "miles": 388.6,
+        "hours": 7.94,
+        "detour_ratio": 1.08,
+        "overlap_with_native": 0.918,
+        "backtrack_ratio": 0.978,
+        "via_snap_distance_m": 4,
+        "via_road": ""
+      },
+      {
+        "offset": -0.1,
+        "miles": 386.3,
+        "hours": 8.83,
+        "detour_ratio": 1.201,
+        "overlap_with_native": 0.948,
+        "backtrack_ratio": 0.979,
+        "via_snap_distance_m": 9,
+        "via_road": "Spruce Run Road"
+      },
+      {
+        "offset": 0.2,
+        "miles": 427.8,
+        "hours": 9.52,
+        "detour_ratio": 1.294,
+        "overlap_with_native": 0.314,
+        "backtrack_ratio": 0.99,
+        "via_snap_distance_m": 122,
+        "via_road": ""
+      },
+      {
+        "offset": -0.2,
+        "miles": 434.9,
+        "hours": 10.62,
+        "detour_ratio": 1.444,
+        "overlap_with_native": 0.815,
+        "backtrack_ratio": 0.938,
+        "via_snap_distance_m": 165,
+        "via_road": ""
+      },
+      {
+        "offset": 0.3,
+        "miles": 445.9,
+        "hours": 9.12,
+        "detour_ratio": 1.24,
+        "overlap_with_native": 0.301,
+        "backtrack_ratio": 0.993,
+        "via_snap_distance_m": 1,
+        "via_road": ""
+      },
+      {
+        "offset": -0.3,
+        "miles": 504.3,
+        "hours": 10.65,
+        "detour_ratio": 1.448,
+        "overlap_with_native": 0.755,
+        "backtrack_ratio": 0.881,
+        "via_snap_distance_m": 74,
+        "via_road": "Tioga River Road"
+      }
+    ],
+    "speed": {
+      "osrm_hours": 7.33,
+      "share_miles_over_65": 0.0,
+      "capped_hours": {
+        "60": 7.33,
+        "65": 7.33,
+        "70": 7.33
+      }
+    },
+    "checkpoints_fastest_route": {
+      "10": 38,
+      "25": 16,
+      "50": 9
+    }
+  },
+  "SaltLake-Denver": {
+    "crow_miles": 370.6,
+    "native_alternatives": 2,
+    "native_routes": [
+      {
+        "miles": 519.5,
+        "hours": 9.02
+      },
+      {
+        "miles": 525.5,
+        "hours": 9.81
+      }
+    ],
+    "response_kb": 407,
+    "via_candidates": [
+      {
+        "offset": 0.1,
+        "miles": 560.0,
+        "hours": 15.9,
+        "detour_ratio": 1.764,
+        "overlap_with_native": 0.316,
+        "backtrack_ratio": 0.985,
+        "via_snap_distance_m": 1029,
+        "via_road": ""
+      },
+      {
+        "offset": -0.1,
+        "miles": 602.9,
+        "hours": 18.95,
+        "detour_ratio": 2.101,
+        "overlap_with_native": 0.45,
+        "backtrack_ratio": 0.962,
+        "via_snap_distance_m": 213,
+        "via_road": ""
+      },
+      {
+        "offset": 0.2,
+        "miles": 576.9,
+        "hours": 11.08,
+        "detour_ratio": 1.228,
+        "overlap_with_native": 0.856,
+        "backtrack_ratio": 0.985,
+        "via_snap_distance_m": 643,
+        "via_road": ""
+      },
+      {
+        "offset": -0.2,
+        "miles": 532.7,
+        "hours": 10.14,
+        "detour_ratio": 1.124,
+        "overlap_with_native": 0.986,
+        "backtrack_ratio": 0.997,
+        "via_snap_distance_m": 189,
+        "via_road": "18 1/2 Road"
+      },
+      {
+        "offset": 0.3,
+        "miles": 545.8,
+        "hours": 10.04,
+        "detour_ratio": 1.113,
+        "overlap_with_native": 0.974,
+        "backtrack_ratio": 0.968,
+        "via_snap_distance_m": 312,
+        "via_road": ""
+      },
+      {
+        "offset": -0.3,
+        "miles": 590.6,
+        "hours": 15.69,
+        "detour_ratio": 1.74,
+        "overlap_with_native": 0.755,
+        "backtrack_ratio": 0.984,
+        "via_snap_distance_m": 38,
+        "via_road": "Pine Mountain Road"
+      }
+    ],
+    "speed": {
+      "osrm_hours": 8.99,
+      "share_miles_over_65": 0.002,
+      "capped_hours": {
+        "60": 9.11,
+        "65": 8.99,
+        "70": 8.99
+      }
+    },
+    "checkpoints_fastest_route": {
+      "10": 53,
+      "25": 22,
+      "50": 12
+    }
+  },
+  "KansasCity-StLouis": {
+    "crow_miles": 237.8,
+    "native_alternatives": 2,
+    "native_routes": [
+      {
+        "miles": 248.1,
+        "hours": 4.73
+      },
+      {
+        "miles": 249.1,
+        "hours": 4.79
+      }
+    ],
+    "response_kb": 182,
+    "via_candidates": [
+      {
+        "offset": 0.1,
+        "miles": 281.8,
+        "hours": 5.4,
+        "detour_ratio": 1.142,
+        "overlap_with_native": 0.922,
+        "backtrack_ratio": 0.959,
+        "via_snap_distance_m": 17,
+        "via_road": ""
+      },
+      {
+        "offset": -0.1,
+        "miles": 297.9,
+        "hours": 6.14,
+        "detour_ratio": 1.299,
+        "overlap_with_native": 0.614,
+        "backtrack_ratio": 0.99,
+        "via_snap_distance_m": 63,
+        "via_road": "Rockhouse Road"
+      },
+      {
+        "offset": 0.2,
+        "miles": 329.9,
+        "hours": 7.17,
+        "detour_ratio": 1.516,
+        "overlap_with_native": 0.145,
+        "backtrack_ratio": 0.994,
+        "via_snap_distance_m": 228,
+        "via_road": ""
+      },
+      {
+        "offset": -0.2,
+        "miles": 358.3,
+        "hours": 7.8,
+        "detour_ratio": 1.65,
+        "overlap_with_native": 0.552,
+        "backtrack_ratio": 0.941,
+        "via_snap_distance_m": 128,
+        "via_road": ""
+      },
+      {
+        "offset": 0.3,
+        "miles": 348.0,
+        "hours": 7.29,
+        "detour_ratio": 1.541,
+        "overlap_with_native": 0.142,
+        "backtrack_ratio": 0.969,
+        "via_snap_distance_m": 539,
+        "via_road": "Shelby County 112"
+      },
+      {
+        "offset": -0.3,
+        "miles": 335.9,
+        "hours": 7.01,
+        "detour_ratio": 1.482,
+        "overlap_with_native": 0.017,
+        "backtrack_ratio": 1.0,
+        "via_snap_distance_m": 52,
+        "via_road": ""
+      }
+    ],
+    "speed": {
+      "osrm_hours": 4.72,
+      "share_miles_over_65": 0.0,
+      "capped_hours": {
+        "60": 4.72,
+        "65": 4.72,
+        "70": 4.72
+      }
+    },
+    "checkpoints_fastest_route": {
+      "10": 26,
+      "25": 11,
+      "50": 6
+    }
+  }
+}

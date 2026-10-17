@@ -1,0 +1,119 @@
+{
+  "grid_resolution": {
+    "lat": {
+      "unique_model_cells": 16,
+      "approx_cell_km": 3.0
+    },
+    "lon": {
+      "unique_model_cells": 14,
+      "approx_cell_km": 2.9
+    }
+  },
+  "locations_per_plan": {
+    "Dallas-Houston": {
+      "route_miles": 238,
+      "checkpoints_3_routes_10mi": 75,
+      "checkpoints_3_routes_25mi": 33,
+      "checkpoints_3_routes_50mi": 18,
+      "heatmap_cells_0.15deg": 193,
+      "heatmap_cells_0.25deg": 78,
+      "heatmap_cells_0.4deg": 56
+    },
+    "Chicago-Denver": {
+      "route_miles": 1005,
+      "checkpoints_3_routes_10mi": 306,
+      "checkpoints_3_routes_25mi": 126,
+      "checkpoints_3_routes_50mi": 66,
+      "heatmap_cells_0.15deg": 680,
+      "heatmap_cells_0.25deg": 295,
+      "heatmap_cells_0.4deg": 189
+    },
+    "LosAngeles-Phoenix": {
+      "route_miles": 373,
+      "checkpoints_3_routes_10mi": 117,
+      "checkpoints_3_routes_25mi": 48,
+      "checkpoints_3_routes_50mi": 27,
+      "heatmap_cells_0.15deg": 274,
+      "heatmap_cells_0.25deg": 116,
+      "heatmap_cells_0.4deg": 79
+    },
+    "Atlanta-Nashville": {
+      "route_miles": 249,
+      "checkpoints_3_routes_10mi": 78,
+      "checkpoints_3_routes_25mi": 33,
+      "checkpoints_3_routes_50mi": 18,
+      "heatmap_cells_0.15deg": 179,
+      "heatmap_cells_0.25deg": 75,
+      "heatmap_cells_0.4deg": 50
+    },
+    "Seattle-Portland": {
+      "route_miles": 174,
+      "checkpoints_3_routes_10mi": 57,
+      "checkpoints_3_routes_25mi": 24,
+      "checkpoints_3_routes_50mi": 15,
+      "heatmap_cells_0.15deg": 143,
+      "heatmap_cells_0.25deg": 56,
+      "heatmap_cells_0.4deg": 39
+    },
+    "NewYork-Pittsburgh": {
+      "route_miles": 370,
+      "checkpoints_3_routes_10mi": 117,
+      "checkpoints_3_routes_25mi": 48,
+      "checkpoints_3_routes_50mi": 27,
+      "heatmap_cells_0.15deg": 257,
+      "heatmap_cells_0.25deg": 108,
+      "heatmap_cells_0.4deg": 71
+    },
+    "SaltLake-Denver": {
+      "route_miles": 519,
+      "checkpoints_3_routes_10mi": 159,
+      "checkpoints_3_routes_25mi": 66,
+      "checkpoints_3_routes_50mi": 36,
+      "heatmap_cells_0.15deg": 354,
+      "heatmap_cells_0.25deg": 150,
+      "heatmap_cells_0.4deg": 97
+    },
+    "KansasCity-StLouis": {
+      "route_miles": 248,
+      "checkpoints_3_routes_10mi": 78,
+      "checkpoints_3_routes_25mi": 33,
+      "checkpoints_3_routes_50mi": 18,
+      "heatmap_cells_0.15deg": 200,
+      "heatmap_cells_0.25deg": 87,
+      "heatmap_cells_0.4deg": 54
+    }
+  },
+  "concurrency": {
+    "parallel_seconds": 3.74,
+    "statuses": [
+      200,
+      200,
+      200,
+      200
+    ],
+    "individual_seconds": [
+      1.39,
+      1.37,
+      3.74,
+      1.44
+    ]
+  },
+  "batch_limits": {
+    "300": {
+      "status": 200,
+      "seconds": 1.65,
+      "url_chars": 5324,
+      "kb": 697,
+      "locations_returned": 300,
+      "reason": null
+    },
+    "600": {
+      "status": 414,
+      "seconds": 0.71,
+      "url_chars": 10436,
+      "kb": 0,
+      "locations_returned": 0,
+      "reason": null
+    }
+  }
+}
