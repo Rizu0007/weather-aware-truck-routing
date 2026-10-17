@@ -4,7 +4,29 @@ Next.js (React) + Django app that helps a truck driver pick the safest route bas
 load weight and travel time. See [ASSESSMENT.md](ASSESSMENT.md) for the brief and the agreed
 interpretations of ambiguous rules.
 
-> Status: planning. API findings are in [API_NOTES.md](API_NOTES.md), stack research in [RESEARCH.md](RESEARCH.md), the build plan in [PLAN.md](PLAN.md). The app itself has not been built yet.
+> Status: planning. API findings are in [API_NOTES.md](API_NOTES.md), stack research in [RESEARCH.md](RESEARCH.md), the build plan in [PLAN.md](PLAN.md). Building checkpoint by checkpoint (see PLAN.md §5).
+
+## Setup
+
+Requirements: Python 3.12, [uv](https://docs.astral.sh/uv/), Node.js 24 (frontend, added later).
+
+### Backend
+
+```bash
+cd backend
+uv sync                 # creates .venv and installs locked dependencies
+uv run ruff check       # lint
+uv run ruff format      # format
+uv run pytest           # tests
+```
+
+### Git hooks
+
+```bash
+backend/.venv/bin/pre-commit install   # runs Ruff on staged backend files before each commit
+```
+
+CI (`.github/workflows/ci.yml`) runs the same lint, format and test steps on every push and PR.
 
 ## External APIs (all keyless)
 

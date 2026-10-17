@@ -175,7 +175,7 @@ Each checkpoint ends with: run it, confirm it works, commit, report to you.
 
 | # | Checkpoint | How it's tested on its own | Covers |
 |---|---|---|---|
-| **C0** **[new]** | Tooling: `backend/pyproject.toml` (uv), Ruff config, pytest config; `.pre-commit-config.yaml`; CI workflow with the backend job | `uv run ruff check`, `uv run pytest` (0 tests) green locally; `pre-commit run --all-files` | R13, R16 |
+| **C0** **[new]** | Tooling: `backend/pyproject.toml` (uv), Ruff config, pytest config; `.pre-commit-config.yaml`; CI workflow with the backend job | `uv sync`, `uv run ruff check`, `uv run ruff format --check` green; `pre-commit run --all-files`; pytest needs the Django project, so its first green run is in C1 | R13, R16 |
 | **C1** | Django skeleton: env settings, DRF, exception handler, `GET /api/health` | pytest API test + `curl /api/health` | — |
 | **C2** | `domain/risk.py` | Parametrised tests for every band edge and each load rule (30,000 vs 30,001 lb, etc.) | R7, R8 |
 | **C3** | `domain/geo.py` + `domain/checkpoints.py` | Tests on the Dallas–Houston sample: counts at 10/25/50 mi, coverage sums to length, ETA at destination = route duration | R5, R6 |
@@ -192,17 +192,17 @@ Each checkpoint ends with: run it, confirm it works, commit, report to you.
 
 Backend first (C0–C7), so the 40 % logic is tested before any UI exists.
 
-## 6. Risks and open questions
+## 6. Risks and decisions
 
-**Need your decision** (details in RESEARCH.md §11)
-1. **Hosting [changed]:** Vercel + Render (two free accounts, recommended) or Render for both?
-2. **Django version [new]:** 5.2 LTS (recommended) or 6.1?
-3. **Styling [new]:** Tailwind (recommended) or CSS Modules?
-4. **E2E [new]:** one local Playwright smoke test, or skip?
-5. **Attribution footer [new]:** OK?
-6. Single-corridor trips: show fewer routes with an explanation (recommended) or add a relaxed second pass?
-7. Heatmap metric toggle (Risk / Wind / Rain / Snow): include or keep risk-only?
-8. ETA time zone: browser's zone OK?
+**Decisions (approved 2026-10-18)**
+1. **Hosting:** Vercel (frontend) + Render (backend).
+2. **Django:** 5.2 LTS.
+3. **Styling:** Tailwind.
+4. **E2E:** no Playwright; manual end-to-end checks per checkpoint.
+5. **Attribution footer:** yes (Open-Meteo CC BY 4.0, © OpenStreetMap contributors).
+6. **Single-corridor trips:** show fewer than 3 routes with an explanation; no relaxed second pass.
+7. **Heatmap:** risk-only (no metric toggle).
+8. **ETA time zone:** the browser's zone, with its abbreviation.
 
 **Known risks**
 9. **Proxy timeout vs cold start [new]:** Vercel's rewrite timeout is undocumented; a ~1 min Render
