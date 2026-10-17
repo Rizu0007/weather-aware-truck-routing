@@ -4,7 +4,7 @@ React + Django app that helps a truck driver pick the safest route based on fore
 load weight and travel time. See [ASSESSMENT.md](ASSESSMENT.md) for the brief and the agreed
 interpretations of ambiguous rules.
 
-> Status: API exploration. The app itself has not been built yet.
+> Status: API exploration done (see [API_NOTES.md](API_NOTES.md)). The app itself has not been built yet.
 
 ## External APIs (all keyless)
 
@@ -28,3 +28,11 @@ python3 scripts/probe_photon.py
 ```
 
 Responses over 300 KB are saved as `*.trimmed.json` with long arrays shortened.
+
+Tuning experiments (alternative-route generation, weather batching, grid sizes) live alongside them:
+
+```bash
+python3 scripts/tune_routes.py        # caches OSRM responses in scripts/.cache/
+python3 scripts/tune_alternatives.py
+python3 scripts/tune_weather.py       # takes ~3 min: pauses to respect rate limits
+```
