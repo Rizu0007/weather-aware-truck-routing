@@ -4,7 +4,7 @@ React + Django app that helps a truck driver pick the safest route based on fore
 load weight and travel time. See [ASSESSMENT.md](ASSESSMENT.md) for the brief and the agreed
 interpretations of ambiguous rules.
 
-> Status: API exploration done (see [API_NOTES.md](API_NOTES.md)). The app itself has not been built yet.
+> Status: planning. API findings are in [API_NOTES.md](API_NOTES.md), the build plan in [PLAN.md](PLAN.md). The app itself has not been built yet.
 
 ## External APIs (all keyless)
 
