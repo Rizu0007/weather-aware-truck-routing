@@ -39,6 +39,17 @@ CI (`.github/workflows/ci.yml`) runs the same lint, format and test steps on eve
 |---|---|
 | `GET /api/health` | `{"status": "ok"}` |
 | `GET /api/places?q=Hous` | Up to 5 North American places: `[{label, lat, lon}]` |
+| `POST /api/trip-plans` | Up to 3 routes with checkpoints, weather at each ETA, risk summaries and the recommended route |
+
+```bash
+curl -X POST localhost:8000/api/trip-plans -H 'Content-Type: application/json' -d '{
+  "origin": {"lat": 32.7767, "lon": -96.797}, "destination": {"lat": 29.7604, "lon": -95.3698},
+  "departure": "2026-10-20T14:00:00Z", "load_lb": 35000, "interval_mi": 10}'
+```
+
+Routes are ranked by fewest No Travel miles, then Severe miles, then High miles, then mile-weighted
+average risk (Low = 0 … No Travel = 4), then travel time. Mile differences under 0.1 mi and average-risk
+differences under 0.01 count as ties.
 
 Errors are always `{"message": str, "extra": {...}}`: 400 invalid input (field errors in
 `extra.fields`), 422 no route / beyond the forecast, 502 an external service failed.

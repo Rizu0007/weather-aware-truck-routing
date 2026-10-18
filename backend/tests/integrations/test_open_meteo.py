@@ -1,13 +1,11 @@
-import copy
-import json
 from datetime import UTC, datetime, timedelta
-from urllib.parse import parse_qs, urlparse
 
 import pytest
 import responses
 from django.conf import settings
 
 from tests.conftest import load_sample
+from tests.mocks import mock_forecast
 from trips.exceptions import ProviderError
 from trips.integrations import open_meteo
 from trips.integrations.open_meteo import hourly, snap
@@ -18,41 +16,6 @@ SAMPLE_START = datetime(2026, 10, 17, 21, tzinfo=UTC)
 DALLAS = (-96.797, 32.7767)
 WACO = (-96.5009, 31.4952)
 HOUSTON = (-95.3698, 29.7604)
-
-
-def fake_forecast(wind=7.0, rain=0.0, showers=0.0, snow=0.0):
-    """A callback answering any Open-Meteo request with the sample's shape.
-
-    It returns as many locations and hours as were asked for: an object for one
-    location, a list for several (API_NOTES.md, Open-Meteo surprise 1).
-    """
-    template = load_sample("open_meteo_single_location")
-
-    def callback(request):
-        query = parse_qs(urlparse(request.url).query)
-        lats = query["latitude"][0].split(",")
-        start = datetime.strptime(query["start_hour"][0], "%Y-%m-%dT%H:%M")
-        end = datetime.strptime(query["end_hour"][0], "%Y-%m-%dT%H:%M")
-        hours = int((end - start) / timedelta(hours=1)) + 1
-        locations = []
-        for i, _ in enumerate(lats):
-            location = copy.deepcopy(template)
-            location["hourly"] = {
-                "time": [
-                    (start + timedelta(hours=h)).strftime("%Y-%m-%dT%H:%M") for h in range(hours)
-                ],
-                "wind_speed_10m": [wind] * hours,
-                "rain": [rain] * hours,
-                "showers": [showers] * hours,
-                "snowfall": [snow] * hours,
-            }
-            if i:
-                location["location_id"] = i
-            locations.append(location)
-        body = locations[0] if len(locations) == 1 else locations
-        return 200, {}, json.dumps(body)
-
-    return callback
 
 
 @responses.activate
@@ -113,7 +76,7 @@ def test_converts_default_metric_units():
 
 @responses.activate
 def test_rain_is_rain_plus_showers():
-    responses.add_callback(responses.GET, URL, callback=fake_forecast(rain=0.10, showers=0.15))
+    mock_forecast(lambda *_: {"wind": 7.0, "rain": 0.10, "showers": 0.15, "snow": 0.0})
 
     [series] = hourly([DALLAS], SAMPLE_START, 2)
 
@@ -136,7 +99,7 @@ def test_nulls_become_missing_values():
 
 @responses.activate
 def test_nearby_points_share_one_lookup():
-    responses.add_callback(responses.GET, URL, callback=fake_forecast())
+    mock_forecast()
     nearby = (DALLAS[0] + 0.01, DALLAS[1] + 0.01)
 
     first, second, waco = hourly([DALLAS, nearby, WACO], SAMPLE_START, 3)
@@ -148,7 +111,7 @@ def test_nearby_points_share_one_lookup():
 @responses.activate
 def test_batches_large_requests(monkeypatch):
     monkeypatch.setattr(open_meteo, "BATCH_SIZE", 2)
-    responses.add_callback(responses.GET, URL, callback=fake_forecast())
+    mock_forecast()
     points = [(-100 + i, 35.0) for i in range(5)]
 
     series = hourly(points, SAMPLE_START, 4)
@@ -160,7 +123,7 @@ def test_batches_large_requests(monkeypatch):
 
 @responses.activate
 def test_second_lookup_is_served_from_cache():
-    responses.add_callback(responses.GET, URL, callback=fake_forecast())
+    mock_forecast()
 
     hourly([DALLAS, WACO], SAMPLE_START, 3)
     hourly([WACO, HOUSTON], SAMPLE_START, 3)
