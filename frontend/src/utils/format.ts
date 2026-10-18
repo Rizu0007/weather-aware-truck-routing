@@ -32,9 +32,7 @@ export function formatDateTime(iso: string, timeZone?: string): string {
 /** "CDT (America/Chicago)": shown next to the departure field. */
 export function describeTimeZone(date = new Date()): string {
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const abbreviation = new Intl.DateTimeFormat("en-US", { timeZoneName: "short" })
-    .formatToParts(date)
-    .find((part) => part.type === "timeZoneName")?.value;
+  const abbreviation = timeZoneAbbreviation(date);
   return abbreviation ? `${abbreviation} (${zone})` : zone;
 }
 
@@ -59,4 +57,32 @@ export function nextFullHour(now = new Date()): Date {
   const next = new Date(now);
   next.setHours(next.getHours() + 1, 0, 0, 0);
   return next;
+}
+
+/** "7:28 PM", or "Mon 12:20 AM" when the day differs from `previousIso`'s. */
+export function formatClock(iso: string, previousIso?: string, timeZone?: string): string {
+  const date = new Date(iso);
+  const time = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    timeZone,
+  }).format(date);
+  const day = (d: Date) =>
+    new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone }).format(d);
+  const sameDay =
+    previousIso !== undefined &&
+    new Intl.DateTimeFormat("en-CA", { dateStyle: "short", timeZone }).format(date) ===
+      new Intl.DateTimeFormat("en-CA", { dateStyle: "short", timeZone }).format(
+        new Date(previousIso),
+      );
+  return sameDay ? time : `${day(date)} ${time}`;
+}
+
+/** The short zone name, e.g. "CDT" or "GMT+5". */
+export function timeZoneAbbreviation(date = new Date(), timeZone?: string): string {
+  return (
+    new Intl.DateTimeFormat("en-US", { timeZoneName: "short", timeZone })
+      .formatToParts(date)
+      .find((part) => part.type === "timeZoneName")?.value ?? ""
+  );
 }

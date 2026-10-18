@@ -1,0 +1,84 @@
+import { RiskStrip } from "@/components/features/results/risk-strip";
+import { Badge } from "@/components/ui/badge";
+import { RISK_LABELS } from "@/constants/risk";
+import type { PlannedRoute } from "@/types/api";
+import { cn } from "@/utils/cn";
+import { formatDateTime, formatDuration, formatMiles } from "@/utils/format";
+
+interface RouteCardListProps {
+  routes: PlannedRoute[];
+  recommendedId: string;
+  selectedId: string;
+  onSelect: (id: string) => void;
+}
+
+/** Native radios styled as cards: arrow keys and screen readers work without extra code. */
+export function RouteCardList({ routes, recommendedId, selectedId, onSelect }: RouteCardListProps) {
+  return (
+    <fieldset className="flex flex-col gap-3">
+      <legend className="mb-2 text-sm font-semibold">Routes, best first</legend>
+      {routes.map((route) => (
+        <RouteCard
+          key={route.id}
+          route={route}
+          recommended={route.id === recommendedId}
+          selected={route.id === selectedId}
+          onSelect={() => onSelect(route.id)}
+        />
+      ))}
+    </fieldset>
+  );
+}
+
+interface RouteCardProps {
+  route: PlannedRoute;
+  recommended: boolean;
+  selected: boolean;
+  onSelect: () => void;
+}
+
+function RouteCard({ route, recommended, selected, onSelect }: RouteCardProps) {
+  const { summary } = route;
+  return (
+    <label
+      className={cn(
+        "flex cursor-pointer flex-col gap-3 rounded-card border bg-surface p-4 shadow-card transition-colors",
+        "has-focus-visible:ring-2 has-focus-visible:ring-ring/40",
+        selected ? "border-primary" : "border-border hover:border-muted-foreground",
+      )}
+    >
+      <input
+        type="radio"
+        name="route"
+        value={route.id}
+        checked={selected}
+        onChange={onSelect}
+        className="sr-only"
+      />
+      <span className="flex flex-wrap items-center gap-2">
+        <span className="font-semibold">Route {route.id}</span>
+        {route.via_town && <Badge variant="outline">via {route.via_town}</Badge>}
+        {recommended && <Badge variant="primary">Recommended</Badge>}
+        <Badge variant={summary.max_level} className="ml-auto">
+          Worst: {RISK_LABELS[summary.max_level]}
+        </Badge>
+      </span>
+      <span className="grid grid-cols-3 gap-2 text-sm tabular-nums">
+        <Stat label="Distance" value={formatMiles(route.distance_mi)} />
+        <Stat label="Drive time" value={formatDuration(route.duration_s)} />
+        <Stat label="Avg risk" value={`${summary.avg_risk.toFixed(2)} / 4`} />
+      </span>
+      <span className="text-xs text-muted-foreground">Arrives {formatDateTime(route.arrival)}</span>
+      <RiskStrip summary={summary} />
+    </label>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: string }) {
+  return (
+    <span className="flex flex-col">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <span className="font-medium">{value}</span>
+    </span>
+  );
+}

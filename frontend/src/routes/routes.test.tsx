@@ -88,8 +88,10 @@ it("shows the waking banner until the health check answers", async () => {
   );
   render(<RouterProvider router={router} />, { wrapper: createQueryWrapper().wrapper });
 
-  expect(screen.getByRole("status")).toHaveTextContent("Connecting to the server");
+  expect(screen.getByText("Connecting to the server…")).toBeInTheDocument();
 
   answer(new Response('{"status":"ok"}', { headers: { "Content-Type": "application/json" } }));
-  await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+  await waitFor(() =>
+    expect(screen.queryByText(/Connecting to the server/)).not.toBeInTheDocument(),
+  );
 });
