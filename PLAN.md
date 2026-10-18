@@ -39,6 +39,7 @@ Items marked **[frontend]** changed in this pass. The backend (C0–C7) is uncha
 | F6 | ESLint 9 (pinned for Next plugins) | **ESLint 10** + typescript-eslint + react-hooks 7 + react-refresh + TanStack Query plugin | No Next.js plugins any more; all of these declare ESLint 10 support (§7.10) |
 | F7 | — | **Design tokens** (CSS variables), WCAG AA checked, light theme only | §7.3 |
 | F8 | — | Trip inputs, selected route and heatmap hour in **URL search params** | Survive refresh, shareable (§7.6) |
+| F10 | Light theme, Positron basemap, system font | **Dark Spotter-style theme** (navy + turquoise), OpenFreeMap **dark** basemap, **DM Sans** | Your choice (Option D); risk colours and heatmap read better on a dark map (§7.3) |
 | F9 | C8–C13 | **C8–C15**, in your order: setup + tokens → ui → layout + router → API + hooks → screens → deploy → docs | §5 |
 
 ## 1. Tech stack **[changed]**
@@ -54,7 +55,7 @@ Items marked **[frontend]** changed in this pass. The backend (C0–C7) is uncha
 | Python tooling | **uv 0.13.1**, Python 3.12 | Locked, fast installs; Render-native |
 | Frontend **[frontend]** | **React 19.3.0 + Vite 8.3.2 + TypeScript 6.0.3**, React Router 8.4.0, TanStack Query 5.104.1 | §7 (full package list in §7.11) |
 | Map | **maplibre-gl 6.12.0**, used directly | WebGL; imperative `setPaintProperty` keeps the slider smooth (40 % of grade) |
-| Basemap | OpenFreeMap **Positron** style (background `#f2f3f0`) | Keyless; style JSON fetched OK on 2026-10-18 |
+| Basemap | OpenFreeMap **dark** style (background `#0c0c0c`) **[frontend]** | Keyless; style JSON fetched OK on 2026-10-18 (§7.3) |
 | Styling **[frontend]** | Tailwind CSS 4.3.3 (`@tailwindcss/vite`) + shadcn/ui components | §7.5 |
 | Tests | pytest 9.1.1 + pytest-django 4.14.0 + responses 0.26.3; Vitest 5.0.3 + React Testing Library 16.3.3 + jsdom 30.1.1 | §6 of RESEARCH, §7.11 |
 | Quality | Ruff 0.17.1; **ESLint 10.12.0** + typescript-eslint 8.71.0 + Prettier 3.9.9; pre-commit 4.7.0; GitHub Actions | §7.10 |
@@ -220,12 +221,14 @@ Backend first (C0–C7), so the 40 % logic is tested before any UI exists.
 9. **Proxy timeout vs cold start:** Vercel's CDN now waits up to **120 s** for an external origin
    ([changelog](https://vercel.com/changelog/cdn-origin-timeout-increased-to-two-minutes)) **[frontend]**,
    longer than a Render cold start (~1 min) and our worst plan (~40 s). The waking state stays.
-10. **MapLibre worker under Vite [frontend]:** documented (`?worker&url` import), untested; checked first in C12c.
-11. **Pinned-behind versions [new]:** TS 6, ESLint 9, Django 5.2 are deliberate (C1–C3); revisit
+10. **Dark basemap legibility [frontend]:** town and road labels are dimmer on `dark`; check in C12c,
+    and fall back to Option E (light) if labels are too hard to read.
+11. **MapLibre worker under Vite [frontend]:** documented (`?worker&url` import), untested; checked first in C12c.
+12. **Pinned-behind versions:** TS 6 and Django 5.2 are deliberate (C1–C3); ESLint moves to 10 with the Vite frontend **[frontend]**; revisit
     when typescript-eslint / plugins / pytest-django declare support for the newer versions.
-12. Public demo servers (OSRM, Photon) have no SLA; Photon's `osm_tag` is marked deprecated **[new]**.
-13. Open-Meteo rate limit and multi-location counting are unverified; free tier is non-commercial **[new]**.
-14. No truck profile (height/weight restrictions), no Hours-of-Service breaks; sustained wind, not gusts;
+13. Public demo servers (OSRM, Photon) have no SLA; Photon's `osm_tag` is marked deprecated **[new]**.
+14. Open-Meteo allows ~600 locations/min for all users together (measured in C7); free tier is non-commercial.
+15. No truck profile (height/weight restrictions), no Hours-of-Service breaks; sustained wind, not gusts;
     forecast hour nearest each ETA.
 
 ## 7. Frontend plan (React + Vite) **[frontend]**
@@ -239,7 +242,7 @@ The app is one working screen plus two small pages. There is no auth, so there a
 | Screen | Shows (API data) | Main actions |
 |---|---|---|
 | **Planner** `/` | Form; recommendation + reason; warnings; route cards A–C (distance, time, arrival, miles by level, worst level); map with risk-coloured segments + checkpoint markers; checkpoint popup/table (ETA, wind/rain/snow, levels, reasons); heatmap overlay with 0–48 h slider and legend | Search and pick origin/destination; set departure, load, interval; plan; select a route (card or map); inspect a checkpoint; scrub or play the heatmap; retry; share the URL |
-| **About** `/about` | Risk table, load rules, ranking order, agreed interpretations, data sources | Read; link back to planner |
+| **About** `/about` (pending Q3: may become an info panel) | Risk table, load rules, ranking order, agreed interpretations, data sources | Read; link back to planner |
 | **Not found** `*` | Message | Link to planner |
 | **Route error** (boundary) | Friendly message | Reload / go to planner |
 
@@ -274,60 +277,76 @@ directly with `setPaintProperty` for the slider.
 
 ### 7.3 Design system
 
-**Palette options** (all chrome colours avoid green/yellow/orange/red/purple, which belong to the risk scale):
+**Palette options** (chrome colours must stay clear of the risk scale's green/yellow/orange/red/magenta):
 
-| Option | Primary | Secondary / accent | Why | Verdict |
-|---|---|---|---|---|
-| **A. Signal Blue** | `#1d4ed8` | tonal blue `#dbeafe` / `#1e3a8a` | Blue reads as "navigation/interactive", stays clear of every risk hue, so the map's colours carry the meaning | **Recommended** |
-| B. Graphite | `#18181b` | `#2563eb` | shadcn default look, very neutral; black buttons feel heavy next to a busy map | OK |
-| C. Highway Green | `#006b3f` | `#b45309` | Interstate-sign theme, but green and amber collide with Low/Moderate/High | Rejected |
+| Option | Look | Why | Verdict |
+|---|---|---|---|
+| A. Signal Blue | Light; primary `#1d4ed8` | Calm and neutral, but risk lines are tight on a light map (3.2–4.5:1) and the heatmap looks washed out | Superseded |
+| B. Graphite | Light; primary `#18181b` | Very neutral; heavy black buttons | Rejected |
+| **D. Spotter-style dark** | Navy `#0d1a2e` / `#1a2332`, turquoise `#40e0d0`→`#20b2aa`, DM Sans | Matches spotter.ai (styles read from their CSS/JS bundles on 2026-10-18); bright risk colours and the heatmap stand out on a dark map; less glare in a cab at night | **Chosen (2026-10-18)** |
+| E. Light + Spotter teal | Navy header, white body, teal `#0f766e` | Safer for map labels; less on-brand | Fallback |
 
-**Tokens (Option A)**, as CSS variables in `src/styles/tokens.css` mapped through Tailwind `@theme inline`
-(the shadcn v4 pattern, [docs](https://ui.shadcn.com/docs/tailwind-v4)). Components use only token
-classes (`bg-primary`, `text-muted-foreground`), never hex. Contrast was computed with the WCAG
-formula; AA thresholds: text 4.5:1, large text and UI/graphics 3:1
+Spotter's own values that fail AA, and what we use instead:
+- Turquoise text on white: 1.6:1, so turquoise is used only on navy.
+- White on `#14b8a6`: 2.5:1, so buttons get dark text on turquoise (10.6:1).
+- Muted `#718096` on `#1a2332`: 3.9:1 ❌, replaced by `#94a3b8` (6.2:1).
+
+**Tokens (Option D, dark only)**, as CSS variables in `src/styles/tokens.css` mapped through Tailwind
+`@theme inline` (the shadcn v4 pattern, [docs](https://ui.shadcn.com/docs/tailwind-v4)). Components use
+only token classes (`bg-surface`, `text-muted-foreground`), never hex. Contrast was computed with the
+WCAG formula; AA thresholds: text 4.5:1, large text and UI/graphics 3:1
 ([1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html),
 [1.4.11](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html)).
 
 | Token | Hex | Checked against | Ratio |
 |---|---|---|---|
-| `--background` | `#f8fafc` | — | — |
-| `--surface` (cards, panels) | `#ffffff` | — | — |
-| `--foreground` (text) | `#0f172a` | background / surface | 17.1 / 17.9 ✅ |
-| `--muted-foreground` | `#475569` | background / surface | 7.2 / 7.6 ✅ |
-| `--border` (dividers, decorative) | `#e2e8f0` | — | n/a |
-| `--input` (field borders) | `#64748b` | surface | 4.8 ✅ (≥ 3) |
-| `--ring` (focus) | `#2563eb` | surface | 5.2 ✅ (≥ 3) |
-| `--primary` / `--primary-foreground` | `#1d4ed8` / `#ffffff` | each other | 6.7 ✅ |
-| `--primary-hover` | `#1e40af` | white text | 8.7 ✅ |
-| `--secondary` / `--secondary-foreground` | `#dbeafe` / `#1e3a8a` | each other | 8.5 ✅ |
-| `--success` (text on `#f0fdf4`) | `#166534` | tint | 6.8 ✅ |
-| `--warning` (text on `#fffbeb`) | `#92400e` | tint | 6.8 ✅ |
-| `--destructive` (text on `#fef2f2`; inline errors on white `#b91c1c`) | `#991b1b` | tint / surface | 7.6 / 6.5 ✅ |
-| `--info` (text on `#eff6ff`) | `#1e40af` | tint | 8.0 ✅ |
+| `--background` (page) | `#0d1a2e` | — | — |
+| `--surface` (cards, panels) | `#1a2332` | — | — |
+| `--surface-raised` (popovers, menus) | `#223047` | — | — |
+| `--foreground` | `#e2e8f0` | background / surface / raised | 14.1 / 12.8 / 10.8 ✅ |
+| `--muted-foreground` | `#94a3b8` | background / surface / raised | 6.8 / 6.2 / 5.2 ✅ |
+| `--border` (dividers, decorative) | `#2d3748` | — | n/a |
+| `--input` (field borders) | `#64748b` | surface / background | 3.3 / 3.7 ✅ (≥ 3) |
+| `--ring` (focus) | `#40e0d0` | surface / background | 9.6 / 10.6 ✅ |
+| `--primary` (+ gradient to `#20b2aa`) | `#40e0d0` | `--primary-foreground` `#0d1a2e` | 10.6 (6.7 at the gradient end) ✅ |
+| `--primary-hover` | `#5eead4` | dark text | 11.8 ✅ |
+| `--primary` as link text | `#40e0d0` | surface | 9.6 ✅ |
+| `--secondary` / `--secondary-foreground` | `#12343b` / `#99f6e4` | each other | 10.5 ✅ |
+| `--success` (text on `#0f2e26`) | `#34d399` | tint | 7.6 ✅ |
+| `--warning` (text on `#33270a`) | `#fbbf24` | tint | 8.8 ✅ |
+| `--destructive` (text on `#3a1620`; inline errors `#f87171` on surface) | `#fca5a5` | tint / surface | 8.4 / 5.7 ✅ |
+| `--info` (text on `#172a46`) | `#93c5fd` | tint | 8.0 ✅ |
 
-**Risk scale** (map lines, badges, heatmap). Lines checked against the Positron basemap `#f2f3f0`:
+**Risk scale** on the OpenFreeMap **dark** basemap (background `#0c0c0c`). Badges use dark text `#0d1a2e` on the risk colour:
 
-| Level | Line / fill | vs basemap | Badge (text on tint) | Badge ratio |
+| Level | Line / fill / badge | vs dark map (≥ 3) | vs surface | Badge text ratio |
 |---|---|---|---|---|
-| Low | `#15803d` | 4.5 ✅ | `#14532d` on `#dcfce7` | 8.3 ✅ |
-| Moderate | `#a16207` (was `#ca8a04`: 2.6 ❌) | 4.4 ✅ | `#713f12` on `#fef9c3` | 8.1 ✅ |
-| High | `#ea580c` | 3.2 ✅ | `#7c2d12` on `#ffedd5` | 8.2 ✅ |
-| Severe | `#dc2626` | 4.3 ✅ | `#7f1d1d` on `#fee2e2` | 8.2 ✅ |
-| No Travel | `#581c87` | 9.8 ✅ | `#581c87` on `#f3e8ff` | 9.2 ✅ |
+| Low | `#22c55e` | 8.6 ✅ | 6.9 | 7.7 ✅ |
+| Moderate | `#facc15` | 12.8 ✅ | 10.3 | 11.4 ✅ |
+| High | `#fb923c` | 8.6 ✅ | 7.0 | 7.7 ✅ |
+| Severe | `#ef4444` | 5.2 ✅ | 4.2 | 4.6 ✅ |
+| No Travel | `#e879f9` | 8.0 ✅ | 6.4 | 7.1 ✅ |
 
-Colour is never the only signal. Badges, popups, the checkpoint table and the legend always show the
-level name. Route lines get a white casing so adjacent levels stay separable for colour-blind users.
+The darker light-map set fails here (No Travel `#581c87`: 1.8:1), so it's not used.
 
-- **Theme:** **light only.** The basemap (Positron) and the risk colours are tuned for light;
-  dark mode would need a second map style and a second contrast pass. **Overkill** for this
-  assessment. Tokens are structured so a `.dark` block could be added later.
-- **Type:** system font stack (`ui-sans-serif, system-ui, …`): no font download, so better LCP.
-  Tailwind's default scale: 12 / 14 / 16 / 18 / 20 / 24 px; weights 400/500/600/700;
+- **Colour is never the only signal.** Badges, popups, the checkpoint table and the legend always show the level
+  name. Route lines get a dark `#0d1a2e` casing so adjacent levels stay separable for colour-blind users.
+- **Turquoise vs Low green:** they're close in hue, so turquoise is **never used on the map**. The selected
+  route is shown by line width + a white halo, not by colour.
+- **Theme:** **dark only** (one theme, same effort as light-only). No theme toggle: **overkill** here.
+- **Panels over the map:** solid `rgba(13, 26, 46, 0.92)`, **no `backdrop-filter`**. Spotter uses
+  `blur(20px)`, but blurring over a moving WebGL canvas costs GPU time on every frame (**UNVERIFIED**
+  magnitude; avoided rather than measured).
+- **Type:** **DM Sans** variable (OFL-1.1, Spotter's open fallback; their primary "Matter" is commercial),
+  self-hosted with `@fontsource-variable/dm-sans`, latin subset only, `font-display: swap`, preloaded.
+  Scale: 12 / 14 / 16 / 18 / 20 / 24 / 32 px; weights 400/500/600/700 (Spotter uses 600 for headings and buttons).
   `tabular-nums` for distances, times and ETAs.
-- **Spacing:** Tailwind's 4 px scale. **Radius:** `--radius` 8 px (sm 6, lg 12).
-  **Shadows:** `sm` cards, `md` popovers, `lg` floating map panels.
-- **Motion:** 150–200 ms transitions; heatmap playback and transitions respect `prefers-reduced-motion`.
+- **Spacing:** Tailwind's 4 px scale. **Radius:** 8 px controls, 12 px cards, 20 px pills/badges
+  (Spotter's values). Buttons: 600 weight, `py-3.5 px-7` for the primary call to action.
+- **Shadows:** `0 8px 24px rgb(0 0 0 / 0.25)` cards; a turquoise glow `0 8px 32px rgb(64 224 208 / 0.15)`
+  for the primary button hover only.
+- **Motion:** 150–300 ms ease transitions (Spotter: 0.3 s); heatmap playback and transitions respect
+  `prefers-reduced-motion`.
 
 ### 7.4 Layout and UX
 
@@ -495,7 +514,8 @@ lives in `MapView` refs, not a hook (one user). The ESLint `react-hooks` plugin 
 - **Keys:** `route.id`, `checkpoint.mile`, `cell lon,lat`; never array indexes.
 - **Splitting:** the map chunk (~MapLibre, the largest dependency) and `/about` are lazy. The map
   chunk is prefetched after the health check succeeds, so it's ready by the time a plan returns.
-- **Assets:** no images besides SVG icons (lucide, tree-shaken); no web fonts.
+- **Assets:** no images besides SVG icons (lucide, tree-shaken); one self-hosted variable font
+  (DM Sans, latin subset, preloaded, `font-display: swap`).
 - **Budgets (UNVERIFIED until C8 measures them):** initial JS ≤ 150 KB gzip without the map chunk;
   Lighthouse (desktop) Performance ≥ 90, Accessibility 100, Best Practices ≥ 95.
 - **Lint:** ESLint 10 flat config: `@eslint/js`, `typescript-eslint` (type-aware), `react-hooks`
@@ -509,6 +529,7 @@ brand-new releases have time to show (e.g. React 19.3.1 is 4 days old → 19.3.0
 | Package | Version | Why |
 |---|---|---|
 | react, react-dom | 19.3.0 | UI (React Router 8 needs ≥ 19.2.7) |
+| @fontsource-variable/dm-sans | 5.3.0 | Self-hosted DM Sans (OFL-1.1) |
 | react-router | 8.4.0 | Routing, data mode |
 | @tanstack/react-query | 5.104.1 | Server state |
 | maplibre-gl | 6.12.0 | Map (Vite worker: `?worker&url`, [docs](https://maplibre.org/maplibre-gl-js/docs/)) |
@@ -529,11 +550,11 @@ brand-new releases have time to show (e.g. React 19.3.1 is 4 days old → 19.3.0
 ### 7.12 Open questions
 
 1. **Discard the Next.js draft?** It's in the scratchpad (not committed). The plan you approved earlier said Next.js; this replaces it.
-2. **Palette A (Signal Blue)?** B is the fallback.
-3. **Light theme only?**
-4. **Include the About page?** It's cheap and shows graders the rules and assumptions in-app.
-5. **Version policy** (newest release ≥ 14 days old) OK?
-6. **Lazy loading:** route `lazy` for pages + `React.lazy` for the map, instead of `React.lazy` for every page (reason in §7.6). OK?
+2. ~~Palette~~: **decided: D (Spotter-style dark)**, 2026-10-18.
+3. **About page:** I recommend dropping it ("correctness over extra features") and putting the risk
+   rules in an info panel on the planner. OK?
+4. **Version policy** (newest release ≥ 14 days old) OK?
+5. **Lazy loading:** route `lazy` for pages + `React.lazy` for the map, instead of `React.lazy` for every page (reason in §7.6). OK?
 
 ## Requirement IDs
 
