@@ -8,6 +8,8 @@ import { PlanError } from "@/components/features/results/plan-error";
 import { PlanSkeleton } from "@/components/features/results/plan-skeleton";
 import { PlanWarnings } from "@/components/features/results/plan-warnings";
 import { Recommendation } from "@/components/features/results/recommendation";
+import { RiskInfoPanel } from "@/components/features/results/risk-info-panel";
+import { RiskProfile } from "@/components/features/results/risk-profile";
 import { RouteCardList } from "@/components/features/results/route-card-list";
 import { TripForm } from "@/components/features/trip-form/trip-form";
 import { TripSummary } from "@/components/features/trip-form/trip-summary";
@@ -75,11 +77,13 @@ export function PlannerPage() {
     setTrip(next);
   }
 
-  // The submit button disappears with the form, so focus moves to the results.
+  // The submit button disappears with the form, so focus falls to the page; give it to
+  // the results instead. Never take it from a field the user has moved on to.
   useEffect(() => {
     if (plan.isSuccess && focusResults.current) {
       focusResults.current = false;
-      resultsHeading.current?.focus();
+      const focusLost = !document.activeElement || document.activeElement === document.body;
+      if (focusLost) resultsHeading.current?.focus();
     }
   }, [plan.isSuccess, plan.dataUpdatedAt]);
 
@@ -105,7 +109,13 @@ export function PlannerPage() {
             submitDisabled={backend !== "ready"}
           />
         ) : (
-          <TripSummary trip={trip} onEdit={() => setEditing(true)} />
+          <TripSummary
+            trip={trip}
+            onEdit={() => {
+              focusResults.current = false;
+              setEditing(true);
+            }}
+          />
         )}
 
         <section
@@ -149,6 +159,7 @@ export function PlannerPage() {
             </>
           )}
         </section>
+        <RiskInfoPanel />
       </aside>
 
       <div className="flex min-w-0 flex-col gap-4">
@@ -208,6 +219,12 @@ export function PlannerPage() {
                 weather at the truck's arrival time
               </span>
             </h2>
+            <RiskProfile
+              route={selected}
+              activeMile={activeMile}
+              onHover={(mile) => setHover(mile === null ? null : { scope, mile })}
+              onActivate={(mile) => setActive({ scope, mile })}
+            />
             <CheckpointTable
               route={selected}
               activeMile={activeMile}

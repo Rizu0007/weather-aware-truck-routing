@@ -103,7 +103,7 @@ export function CheckpointTable({
               <td className="px-3 py-2 text-right">{reading(checkpoint.wind_mph, 0)}</td>
               <td className="px-3 py-2 text-right">{reading(checkpoint.rain_in_hr, 2)}</td>
               <td className="px-3 py-2 text-right">{reading(checkpoint.snow_in_hr, 1)}</td>
-              <td className="px-3 py-2 text-muted-foreground">
+              <td className="min-w-64 px-3 py-2 text-muted-foreground">
                 {checkpoint.reasons.join("; ") || "—"}
               </td>
             </tr>

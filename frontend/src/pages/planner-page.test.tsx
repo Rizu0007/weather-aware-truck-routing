@@ -65,6 +65,8 @@ function renderPlanner(url = "/", routes: Record<string, unknown> = {}) {
 const tripPosts = (fetch: ReturnType<typeof mockFetch>) =>
   fetch.mock.calls.filter(([input]) => input === "/api/trip-plans");
 
+const checkpointTable = () => screen.getByRole("table", { name: /Weather at each checkpoint/ });
+
 const errorBody = (message: string, extra: Record<string, unknown> = {}) => ({ message, extra });
 
 describe("PlannerPage: planning", () => {
@@ -80,6 +82,23 @@ describe("PlannerPage: planning", () => {
     // The form collapses to a summary and focus moves to the results.
     expect(screen.queryByRole("form", { name: "Trip details" })).not.toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Results" })).toHaveFocus();
+  });
+
+  it("doesn't take focus from a field the user is typing in when a plan arrives", async () => {
+    let answer: (response: Response) => void = () => {};
+    renderPlanner("/", {
+      "/api/trip-plans": () => new Promise<Response>((resolve) => (answer = resolve)),
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "Try Dallas → Houston" }));
+    // While it plans, the user opens the form again and starts typing.
+    await userEvent.click(await screen.findByRole("button", { name: "Edit" }));
+    const load = screen.getByLabelText("Load (lb)");
+    await userEvent.click(load);
+
+    answer(jsonResponse(tripPlan));
+    await screen.findByText("Take route B");
+
+    expect(load).toHaveFocus();
   });
 
   it("plans the trip in a shared link straight away", async () => {
@@ -163,7 +182,7 @@ describe("PlannerPage: results", () => {
 
     expect(screen.getByRole("heading", { name: /Checkpoints on route A/ })).toBeInTheDocument();
     expect(new URLSearchParams(router.state.location.search).get("route")).toBe("A");
-    const table = screen.getByRole("table");
+    const table = checkpointTable();
     expect(within(table).getAllByText("No Travel").length).toBeGreaterThan(0);
     expect(within(table).getAllByText(/Wind 50 mph with a 35,000 lb load/).length).toBeGreaterThan(
       0,
@@ -281,13 +300,14 @@ describe("PlannerPage: map", () => {
 
     await userEvent.click(await screen.findByRole("button", { name: "map: click checkpoint 3" }));
 
-    const rows = within(screen.getByRole("table")).getAllByRole("row").slice(1);
+    const rows = within(checkpointTable()).getAllByRole("row").slice(1);
     expect(rows[2]).toHaveAttribute("aria-current", "true");
   });
 
   it("table rows drive the map: hover enlarges the marker, the mile button opens its popup", async () => {
     renderPlanner(SHARED, { "/api/trip-plans": tripPlan });
-    const row = (await screen.findAllByRole("row"))[2];
+    await screen.findByText("Take route B");
+    const row = within(checkpointTable()).getAllByRole("row")[2];
 
     await userEvent.hover(row);
     expect(screen.getByTestId("map")).toHaveAttribute("data-hover", "25");
