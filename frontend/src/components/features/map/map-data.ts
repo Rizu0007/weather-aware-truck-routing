@@ -136,19 +136,3 @@ function pointAtMile(route: PlannedRoute, mile: number): LonLat {
   }
   return line[line.length - 1];
 }
-
-/** The truck as a single point, for the map. */
-export function truckPoint(position: TruckPosition | null): FeatureCollection<Point> {
-  return {
-    type: "FeatureCollection",
-    features: position
-      ? [
-          {
-            type: "Feature",
-            geometry: { type: "Point", coordinates: position.lonLat },
-            properties: {},
-          },
-        ]
-      : [],
-  };
-}

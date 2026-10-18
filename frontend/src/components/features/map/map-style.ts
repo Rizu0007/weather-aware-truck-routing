@@ -10,7 +10,6 @@ export const SOURCES = {
   routes: "routes",
   checkpoints: "checkpoints",
   endpoints: "endpoints",
-  truck: "truck",
 } as const;
 
 export const LAYERS = {
@@ -19,7 +18,6 @@ export const LAYERS = {
   hit: "route-hit",
   checkpoints: "checkpoints",
   endpoints: "endpoints",
-  truck: "truck",
 } as const;
 
 /** A MapLibre expression (validated at runtime; its tuple types are too strict to infer). */
@@ -117,18 +115,6 @@ export function routeLayers(selectedId: string): AddLayerObject[] {
         "circle-radius": 7,
         "circle-color": expression<string>(["match", ["get", "kind"], "origin", casing, "#ffffff"]),
         "circle-stroke-color": "#ffffff",
-        "circle-stroke-width": 3,
-      },
-    },
-    {
-      // Where the truck is at the heatmap's hour: ties the weather's "when" to the route.
-      id: LAYERS.truck,
-      type: "circle",
-      source: SOURCES.truck,
-      paint: {
-        "circle-radius": 8,
-        "circle-color": token("--primary", "#40e0d0"),
-        "circle-stroke-color": casing,
         "circle-stroke-width": 3,
       },
     },

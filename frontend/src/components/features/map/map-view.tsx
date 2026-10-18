@@ -4,6 +4,7 @@ import "@/components/features/map/map-view.css";
 import {
   LngLatBounds,
   Map as MapLibreMap,
+  Marker,
   NavigationControl,
   Popup,
   setWorkerUrl,
@@ -23,7 +24,6 @@ import {
   riskSegments,
   routeLines,
   truckAt,
-  truckPoint,
 } from "@/components/features/map/map-data";
 import {
   BASEMAP_STYLE,
@@ -35,12 +35,28 @@ import {
 } from "@/components/features/map/map-style";
 import { RiskField } from "@/components/features/map/risk-field";
 import { WeatherFlow } from "@/components/features/map/weather-flow";
+import { prefersReducedMotion } from "@/utils/motion";
 import type { Heatmap, PlannedRoute } from "@/types/api";
 
 // Vite needs the worker's URL spelled out (MapLibre docs, "Vite").
 setWorkerUrl(workerUrl);
 
 const FIT_PADDING = 48;
+const TRUCK_GLIDE_MS = 900; // a little under playback's hour-a-second, so it arrives each step
+
+/** The truck badge: lucide's truck in a turquoise disc (decorative; the timeline says where). */
+function truckElement(): HTMLElement {
+  const element = document.createElement("div");
+  element.className = "truck-marker";
+  element.setAttribute("aria-hidden", "true");
+  element.innerHTML =
+    '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" ' +
+    'stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">' +
+    '<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/>' +
+    '<path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>' +
+    '<circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>';
+  return element;
+}
 
 /** The part of a GeoJSON source we use (v6 doesn't export the class type). */
 interface GeoJSONSourceLike {
@@ -106,7 +122,7 @@ export default function MapView({
       hour.current = next;
       field.current?.setHour(next);
       wind.current?.setHour(next);
-      moveTruck();
+      moveTruck(true);
     },
   }));
 
@@ -116,15 +132,35 @@ export default function MapView({
     latest.current = { onSelectRoute, onActivateCheckpoint, selected, heatmap };
   });
 
-  /** The truck's place on the selected route at the heatmap's hour (none until it loads). */
-  function moveTruck() {
+  const truck = useRef<{ marker: Marker; shownAt: number; frame: number } | null>(null);
+
+  /** The truck's time at the slider's hour: from the heatmap's start, else from departure. */
+  function truckTime(): number {
     const { selected: route, heatmap: grid } = latest.current;
-    const instance = map.current;
-    if (!instance) return;
-    const time = grid ? Date.parse(grid.start) + hour.current * 3_600_000 : null;
-    void source(instance, SOURCES.truck)?.setData(
-      truckPoint(time === null ? null : truckAt(route, time)),
-    );
+    const start = grid ? Date.parse(grid.start) : Date.parse(route.checkpoints[0].eta);
+    return start + hour.current * 3_600_000;
+  }
+
+  /** Put the truck at the slider's hour; `glide` drives it there along the road instead. */
+  function moveTruck(glide: boolean) {
+    const current = truck.current;
+    if (!current) return;
+    cancelAnimationFrame(current.frame);
+    const { selected: route } = latest.current;
+    const target = truckTime();
+    const place = (time: number) => {
+      current.shownAt = time;
+      current.marker.setLngLat(truckAt(route, time).lonLat);
+    };
+    if (!glide || prefersReducedMotion()) return place(target);
+    const from = current.shownAt;
+    const started = performance.now();
+    const step = (now: number) => {
+      const t = Math.min(1, (now - started) / TRUCK_GLIDE_MS);
+      place(from + (target - from) * t);
+      if (t < 1) current.frame = requestAnimationFrame(step);
+    };
+    current.frame = requestAnimationFrame(step);
   }
 
   // Create the map once.
@@ -135,8 +171,7 @@ export default function MapView({
       style: BASEMAP_STYLE,
       bounds: boundsOf(routes),
       fitBoundsOptions: { padding: FIT_PADDING },
-      // On touch screens one finger scrolls the page, two move the map. A mouse wheel zooms:
-      // making desktop users hold ⌘ felt like the map was broken.
+      // Touch screens: one finger scrolls the page, two move the map. A mouse wheel zooms.
       cooperativeGestures: matchMedia("(pointer: coarse)").matches,
       attributionControl: { compact: true },
     });
@@ -160,10 +195,17 @@ export default function MapView({
       instance.addSource(SOURCES.routes, { type: "geojson", data: routeLines(routes) });
       instance.addSource(SOURCES.checkpoints, { type: "geojson", data: checkpointPoints(route) });
       instance.addSource(SOURCES.endpoints, { type: "geojson", data: endpoints(route) });
-      instance.addSource(SOURCES.truck, { type: "geojson", data: truckPoint(null) });
       for (const layer of routeLayers(route.id)) instance.addLayer(layer);
       // Under the routes, so they stay readable over any weather.
       field.current = new RiskField(instance, LAYERS.casing);
+      // A DOM marker, so gliding it each frame costs nothing on the map's side.
+      truck.current = {
+        marker: new Marker({ element: truckElement() })
+          .setLngLat(route.geometry[0])
+          .addTo(instance),
+        shownAt: 0,
+        frame: 0,
+      };
       wind.current = new WeatherFlow(instance);
       setLoaded(true);
     });
@@ -195,6 +237,8 @@ export default function MapView({
     });
 
     return () => {
+      if (truck.current) cancelAnimationFrame(truck.current.frame);
+      truck.current = null;
       wind.current?.destroy();
       wind.current = null;
       field.current = null;
@@ -243,7 +287,9 @@ export default function MapView({
   }, [loaded, heatmap]);
 
   useEffect(() => {
-    if (loaded) moveTruck();
+    if (loaded) moveTruck(false);
+    // moveTruck reads the latest props through refs, so a new render's copy changes nothing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, heatmap, selected]);
 
   useEffect(() => {

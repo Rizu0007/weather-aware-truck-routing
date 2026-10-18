@@ -63,3 +63,18 @@
   background: rgb(13 26 46 / 0.75);
   color: var(--foreground);
 }
+
+/* The truck at the timeline's hour: above routes and weather, out of the way of clicks. */
+.truck-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9999px;
+  background: var(--primary);
+  color: var(--route-casing, #0d1a2e);
+  border: 3px solid var(--route-casing, #0d1a2e);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
+  pointer-events: none;
+}

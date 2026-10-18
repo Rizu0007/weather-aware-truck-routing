@@ -76,9 +76,11 @@ export function HeatmapControls({
     ? ""
     : truck.state === "waiting"
       ? "the truck hasn't left yet"
-      : truck.state === "arrived"
-        ? `the truck has arrived (route ${route!.id})`
-        : `the truck is at mile ${Math.round(truck.mile)} on route ${route!.id}`;
+      : truck.state === "driving" && truck.mile < 1
+        ? `the truck is setting off on route ${route!.id}`
+        : truck.state === "arrived"
+          ? `the truck has arrived (route ${route!.id})`
+          : `the truck is at mile ${Math.round(truck.mile)} on route ${route!.id}`;
   const label = `+${hour} h · ${time}${truckText ? ` · ${truckText}` : ""}`;
 
   return (
@@ -88,9 +90,9 @@ export function HeatmapControls({
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="heatmap-heading" className="text-base font-semibold">
-          Weather along the corridor
+          Forecast timeline
           <span className="ml-2 text-sm font-normal text-muted-foreground">
-            0–48 h after departure
+            drag to see the weather hour by hour, and where your truck is
           </span>
         </h2>
         <div className="flex flex-wrap items-center gap-4">
@@ -103,7 +105,7 @@ export function HeatmapControls({
                 onChange={(event) => onMotionChange(event.target.checked)}
                 className="size-4 accent-primary"
               />
-              Animate weather
+              Moving wind & rain
             </label>
           )}
           <label className="flex cursor-pointer items-center gap-2 text-sm">
