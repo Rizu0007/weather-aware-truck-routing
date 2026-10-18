@@ -19,7 +19,7 @@ interface HeatmapControlsProps {
   onRetry: () => void;
   visible: boolean;
   onVisibleChange: (visible: boolean) => void;
-  /** Animated rain, snow and wind on the map. */
+  /** Wind drawn as flowing streamlines on the map. */
   motion?: boolean;
   onMotionChange?: (motion: boolean) => void;
   initialHour: number;
@@ -88,7 +88,7 @@ export function HeatmapControls({
                 onChange={(event) => onMotionChange(event.target.checked)}
                 className="size-4 accent-primary"
               />
-              Animate rain and wind
+              Animate wind
             </label>
           )}
           <label className="flex cursor-pointer items-center gap-2 text-sm">

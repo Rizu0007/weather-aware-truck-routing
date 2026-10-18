@@ -111,7 +111,7 @@ describe("HeatmapControls", () => {
         onRetry={() => {}}
       />,
     );
-    const toggle = screen.getByRole("checkbox", { name: "Animate rain and wind" });
+    const toggle = screen.getByRole("checkbox", { name: "Animate wind" });
 
     await userEvent.click(toggle);
     expect(onMotionChange).toHaveBeenCalledWith(false);

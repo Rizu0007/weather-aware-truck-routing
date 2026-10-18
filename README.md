@@ -20,11 +20,11 @@ weather heatmap.
   says so ("Safer to leave 5 h later") and replans with one click.
 - **Map**: routes coloured by risk, checkpoint popups (ETA, wind, rain, snow, reason), click a route
   to select it.
-- **Corridor heatmap** with a 0–48 h slider and playback; scrubbing never calls the server. Low
-  cells stay clear, so only weather worth noticing is coloured.
-- **Rain, snow and wind animation** in those cells, following the slider: drops lean with the wind,
-  streaks move with its direction and speed. One canvas, particles fade in and out (no popping),
-  capped at 1,500; off by default when the system asks for reduced motion, and it has a switch.
+- **Corridor heatmap** with a 0–48 h slider and playback; scrubbing never calls the server. Drawn
+  like weather radar: smooth rounded areas in crisp risk colours, Low left clear.
+- **Wind flow** over the corridor, Windy-style: streamlines drift with each hour's wind direction and
+  speed and leave fading trails; strong wind stands out, calm air barely shows. It has a switch and
+  is off by default when the system asks for reduced motion.
 - **Risk profile** strip and a **checkpoint table**, both linked with the map; the table is also the
   accessible text version of the map.
 - Trips live in the URL, so a plan survives a refresh and can be shared.
@@ -51,8 +51,9 @@ weather heatmap.
 7. **Later departures.** The forecast is fetched 24 h longer, and each hourly departure is re-scored
    from it, with no extra requests. The earliest departure with the fewest No Travel, Severe and High
    miles is suggested if it beats the planned one; less Moderate or a shorter drive alone isn't.
-8. **Heatmap.** A grid of up to 120 cells 50 km either side of the routes, 49 hourly risk levels each,
-   loaded once; the slider only restyles the map.
+8. **Heatmap.** A grid of up to 120 cells 50 km either side of the routes, 49 hourly risk levels and
+   winds each, loaded once. Each hour is a small image (one pixel per cell, scaled up smoothly with a
+   sharp edge), so the slider only redraws ~100 pixels.
 
 ### Assumptions (where the brief left room)
 

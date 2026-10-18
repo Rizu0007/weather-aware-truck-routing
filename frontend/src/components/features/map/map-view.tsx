@@ -20,21 +20,19 @@ import {
   checkpointIndex,
   checkpointPoints,
   endpoints,
-  heatmapCells,
   riskSegments,
   routeLines,
 } from "@/components/features/map/map-data";
 import {
   BASEMAP_STYLE,
-  heatmapLayer,
-  heatmapPaint,
   LAYERS,
   routeLayers,
   selectionPaint,
   sortKey,
   SOURCES,
 } from "@/components/features/map/map-style";
-import { WeatherMotion } from "@/components/features/map/weather-motion";
+import { RiskField } from "@/components/features/map/risk-field";
+import { WindFlow } from "@/components/features/map/wind-flow";
 import type { Heatmap, PlannedRoute } from "@/types/api";
 
 // Vite needs the worker's URL spelled out (MapLibre docs, "Vite").
@@ -64,7 +62,7 @@ export interface MapViewProps {
   onActivateCheckpoint: (mile: number | null) => void;
   heatmap?: Heatmap;
   heatmapVisible?: boolean;
-  /** Animated rain, snow and wind in the heatmap cells (only while the heatmap shows). */
+  /** Wind drawn as flowing streamlines over the corridor (only while the heatmap shows). */
   weatherMotion?: boolean;
   /** Hour shown when the heatmap first appears; later changes go through the handle. */
   initialHour?: number;
@@ -93,7 +91,8 @@ export default function MapView({
 }: MapViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
-  const motion = useRef<WeatherMotion | null>(null);
+  const field = useRef<RiskField | null>(null);
+  const wind = useRef<WindFlow | null>(null);
   const [popupNode] = useState(() => document.createElement("div"));
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(() => !supportsWebGL());
@@ -103,12 +102,8 @@ export default function MapView({
   useImperativeHandle(ref, () => ({
     setHeatmapHour(next: number) {
       hour.current = next;
-      motion.current?.setHour(next);
-      const instance = map.current;
-      if (!instance?.getLayer(LAYERS.heatmap)) return;
-      const paint = heatmapPaint(next);
-      instance.setPaintProperty(LAYERS.heatmap, "fill-color", paint["fill-color"]);
-      instance.setPaintProperty(LAYERS.heatmap, "fill-opacity", paint["fill-opacity"]);
+      field.current?.setHour(next);
+      wind.current?.setHour(next);
     },
   }));
 
@@ -147,18 +142,14 @@ export default function MapView({
         ?.querySelector(".maplibregl-ctrl-attrib")
         ?.classList.remove("maplibregl-compact-show");
       const { selected: route } = latest.current;
-      instance.addSource(SOURCES.heatmap, {
-        type: "geojson",
-        data: { type: "FeatureCollection", features: [] },
-      });
-      instance.addLayer(heatmapLayer(hour.current));
       instance.addSource(SOURCES.segments, { type: "geojson", data: riskSegments(routes) });
       instance.addSource(SOURCES.routes, { type: "geojson", data: routeLines(routes) });
       instance.addSource(SOURCES.checkpoints, { type: "geojson", data: checkpointPoints(route) });
       instance.addSource(SOURCES.endpoints, { type: "geojson", data: endpoints(route) });
       for (const layer of routeLayers(route.id)) instance.addLayer(layer);
-      motion.current = new WeatherMotion(instance);
-      motion.current.setHour(hour.current);
+      // Under the routes, so they stay readable over any weather.
+      field.current = new RiskField(instance, LAYERS.casing);
+      wind.current = new WindFlow(instance);
       setLoaded(true);
     });
     let styleLoaded = false;
@@ -189,8 +180,9 @@ export default function MapView({
     });
 
     return () => {
-      motion.current?.destroy();
-      motion.current = null;
+      wind.current?.destroy();
+      wind.current = null;
+      field.current = null;
       instance.remove();
       map.current = null;
     };
@@ -226,23 +218,20 @@ export default function MapView({
     }
   }, [loaded, selected]);
 
-  // Heatmap data arrives after the plan; it's loaded once and restyled per hour.
+  // Heatmap data arrives after the plan; it's loaded once, then each hour only redraws.
   useEffect(() => {
-    const instance = map.current;
-    if (!loaded || !instance || !heatmap) return;
-    void source(instance, SOURCES.heatmap)?.setData(heatmapCells(heatmap));
-    motion.current?.setHeatmap(heatmap);
+    if (!loaded || !heatmap) return;
+    field.current?.setHour(hour.current);
+    field.current?.setHeatmap(heatmap);
+    wind.current?.setHour(hour.current);
+    wind.current?.setHeatmap(heatmap);
   }, [loaded, heatmap]);
 
   useEffect(() => {
-    if (loaded) motion.current?.setEnabled(weatherMotion && heatmapVisible);
-  }, [loaded, weatherMotion, heatmapVisible]);
-
-  useEffect(() => {
-    const instance = map.current;
-    if (!loaded || !instance) return;
-    instance.setLayoutProperty(LAYERS.heatmap, "visibility", heatmapVisible ? "visible" : "none");
-  }, [loaded, heatmapVisible]);
+    if (!loaded) return;
+    field.current?.setVisible(heatmapVisible);
+    wind.current?.setEnabled(weatherMotion && heatmapVisible && Boolean(heatmap));
+  }, [loaded, weatherMotion, heatmapVisible, heatmap]);
 
   // Hovered or active checkpoint: enlarged marker.
   useEffect(() => {
