@@ -25,6 +25,22 @@ Items marked **[changed]** below differ from the first version of this plan.
 | 13 | — | Attribution footer (Open-Meteo CC BY 4.0, © OpenStreetMap) | Open-Meteo terms; OSM data in tiles/routing/geocoding (§10) |
 | 14 | — | **C0 tooling checkpoint** added; C8/C12 rewritten for Next.js and two hosts | Build order (§5 below) |
 
+## 0b. Frontend re-plan (2026-10-18, after C7) **[frontend]**
+
+Items marked **[frontend]** changed in this pass. The backend (C0–C7) is unchanged.
+
+| # | Before | After | Why |
+|---|---|---|---|
+| F1 | Next.js 16 App Router | **React 19 + Vite 8 SPA** (`create-vite` `react-ts`) | Your direction: React, not Next.js. Nothing needs SSR: every request is user-triggered (§7.1) |
+| F2 | Next.js `rewrites()` proxy | **Vite `server.proxy`** in dev, **`vercel.json` rewrite** in prod | Keeps same-origin `/api` calls: still no CORS, no backend URL in the bundle (§7.2) |
+| F3 | No router (one page) | **React Router 8, data mode** (`createBrowserRouter`) | Nested layout, route error boundaries, lazy routes (§7.6) |
+| F4 | Plain hooks, "React Query is overkill" | **TanStack Query 5** | Trip state moves to the URL, so the plan becomes a query keyed by URL params; cache, dedupe and cancellation for 4 queries (§7.8) |
+| F5 | Tailwind only | **Tailwind 4 + shadcn/ui** (copied-in components on Radix) | Accessible slider and primitives without writing them; we own the code (§7.5) |
+| F6 | ESLint 9 (pinned for Next plugins) | **ESLint 10** + typescript-eslint + react-hooks 7 + react-refresh + TanStack Query plugin | No Next.js plugins any more; all of these declare ESLint 10 support (§7.10) |
+| F7 | — | **Design tokens** (CSS variables), WCAG AA checked, light theme only | §7.3 |
+| F8 | — | Trip inputs, selected route and heatmap hour in **URL search params** | Survive refresh, shareable (§7.6) |
+| F9 | C8–C13 | **C8–C15**, in your order: setup + tokens → ui → layout + router → API + hooks → screens → deploy → docs | §5 |
+
 ## 1. Tech stack **[changed]**
 
 | Layer | Choice | Why |
@@ -36,12 +52,12 @@ Items marked **[changed]** below differ from the first version of this plan.
 | Database | **none** | Stateless |
 | App server | gunicorn 26.2.0 | Render start command |
 | Python tooling | **uv 0.13.1**, Python 3.12 | Locked, fast installs; Render-native |
-| Frontend | **Next.js 16.4.2, React 19.3.1, TypeScript 6.0.3** | Requested stack; TS 6 for typescript-eslint compatibility (C1) |
-| Map | **maplibre-gl 6.14.0**, used directly | WebGL; imperative `setPaintProperty` keeps the slider smooth (40 % of grade) |
-| Basemap | OpenFreeMap vector tiles | Keyless — **probe at C9** |
-| Styling | Tailwind CSS 4.3.3 (create-next-app default) | Pending your answer (RESEARCH Q3) |
-| Tests | pytest 9.1.1 + pytest-django 4.14.0 + responses 0.26.3; Vitest 5.0.5 + React Testing Library 16.3.3 + jsdom 30.1.3 | §6 of RESEARCH |
-| Quality | Ruff 0.17.1; ESLint 9.39.5 + eslint-config-next 16.4.2 + Prettier 3.9.10; pre-commit 4.7.0; GitHub Actions | §7 of RESEARCH |
+| Frontend **[frontend]** | **React 19.3.0 + Vite 8.3.2 + TypeScript 6.0.3**, React Router 8.4.0, TanStack Query 5.104.1 | §7 (full package list in §7.11) |
+| Map | **maplibre-gl 6.12.0**, used directly | WebGL; imperative `setPaintProperty` keeps the slider smooth (40 % of grade) |
+| Basemap | OpenFreeMap **Positron** style (background `#f2f3f0`) | Keyless; style JSON fetched OK on 2026-10-18 |
+| Styling **[frontend]** | Tailwind CSS 4.3.3 (`@tailwindcss/vite`) + shadcn/ui components | §7.5 |
+| Tests | pytest 9.1.1 + pytest-django 4.14.0 + responses 0.26.3; Vitest 5.0.3 + React Testing Library 16.3.3 + jsdom 30.1.1 | §6 of RESEARCH, §7.11 |
+| Quality | Ruff 0.17.1; **ESLint 10.12.0** + typescript-eslint 8.71.0 + Prettier 3.9.9; pre-commit 4.7.0; GitHub Actions | §7.10 |
 | Hosting | **Vercel** (frontend) + **Render** free web service (backend) | Pending your answer (RESEARCH Q1) |
 
 The draft code moved to scratchpad in Phase 0 is not reused wholesale; pieces are rewritten per checkpoint.
@@ -64,21 +80,13 @@ my-app/
 │   │   ├── integrations/               http.py, osrm.py, open_meteo.py, photon.py
 │   │   └── exceptions.py
 │   └── tests/                          conftest.py, fixtures/, domain/, integrations/, services/, api/
-└── frontend/
-    ├── package.json  next.config.ts  eslint.config.mjs  .prettierrc.json  vitest.config.mts  .env.example
-    └── src/
-        ├── app/                        layout.tsx, page.tsx, error.tsx, globals.css
-        ├── components/                 trip-planner/, routes/, map/, heatmap/
-        ├── hooks/                      use-trip-plan.ts, use-heatmap.ts, use-place-search.ts, use-backend-health.ts
-        ├── lib/                        api/client.ts, api/endpoints.ts, risk.ts, format.ts
-        ├── types/api.ts
-        └── test/fixtures/              our own API responses captured from backend tests
+└── frontend/                           React + Vite SPA; full tree in §7.7 [frontend]
 ```
 
 ## 3. Data flow **[changed]**
 
 ```text
- Browser                Next.js (Vercel)          Django (Render)                        Third-party
+ Browser (React SPA)    Vercel rewrite **[frontend]**  Django (Render)                   Third-party
  ───────                ────────────────          ───────────────                        ───────────
  page load ──GET /api/health──▶ rewrite ──▶ HealthApi  (wakes a sleeping Render instance)
 
@@ -100,7 +108,7 @@ my-app/
             ◀── routes[], checkpoints[], summaries, recommendation, warnings
 
  HeatmapControls ──POST /api/heatmaps──▶ rewrite ──▶ HeatmapCreateApi
-   {departure, load_lb, points}                     services.heatmap.build_heatmap (grid ≤ ~200 cells)
+   {departure, load_lb, routes}                     services.heatmap.build_heatmap (grid ≤ 120 cells)
                                                     integrations.open_meteo.hourly (49 h) ─▶ Open-Meteo
             ◀── {start, cell_deg, cells: [{lon, lat, risk[49], wind[49], rain[49], snow[49]}]}
 
@@ -142,8 +150,9 @@ errors under `extra.fields`).
 - Validation checks: both places present and ≥ 1 mi apart, load 1–80,000 lb, interval ∈ {10, 25, 50},
   departure no more than 1 h in the past; after routing, `departure + longest trip` and
   `departure + 48 h` must fit the ~15-day horizon.
-- Retries: network errors, 429 and 5xx, up to 3× with backoff. Errors are mapped by status code,
-  never by parsing provider bodies.
+- Retries: network errors and 5xx, up to 3× with backoff. A provider 429 is not retried: it becomes
+  **503** with `retry_after` (C7). Our own per-IP limit returns **429**. Errors are mapped by status
+  code; OSRM's documented `code` field is the one exception (C5).
 - Weather is all-or-nothing for a plan. A heatmap failure never fails the plan.
 - Fewer than 3 routes is a warning, not an error.
 
@@ -166,7 +175,8 @@ errors under `extra.fields`).
 ### Missing keys / env **[changed]**
 - Backend: `DJANGO_SECRET_KEY` is required in production (django-environ raises
   `ImproperlyConfigured` when missing). Provider URLs and `OPEN_METEO_API_KEY` are optional.
-- Frontend: `BACKEND_URL` only, server-side. **No `NEXT_PUBLIC_*` variables.**
+- Frontend **[frontend]**: no secrets, ever. `VITE_API_BASE_URL` (optional, default `/api`) is the only
+  `VITE_` variable. Dev proxy target comes from `DEV_BACKEND_URL` (read in `vite.config.ts`, never bundled).
 - Both sides ship `.env.example`; `.env*` is git-ignored.
 
 ## 5. Build order (checkpoints) **[changed]**
@@ -183,12 +193,14 @@ Each checkpoint ends with: run it, confirm it works, commit, report to you.
 | **C5** | `integrations/osrm.py`, `photon.py` + alternative-route logic + `GET /api/places` | `responses` tests with samples: duplicate/detour rejected, < 3 routes path; manual Dallas–Houston + Seattle–Portland | R1, R4 |
 | **C6** | `domain/ranking.py` + `services/trip_planning.py` + `POST /api/trip-plans` | Ranking tests (no-travel → severe → high → avg → time, ties, explanation); API test with providers mocked; one real call | R2, R3, R9 |
 | **C7** | `services/heatmap.py` + `POST /api/heatmaps` | Grid bounded for a 1,000 mi route; levels match `risk.py`; real call timing | R11 |
-| **C8** **[changed]** | Next.js scaffold (`create-next-app` with the RESEARCH §3.1 flags), pin TS 6.0.3 / ESLint 9.39.5, Prettier, Vitest; rewrites to Django; typed API client; health hook; TripForm + autocomplete; CI frontend job | Vitest for `format.ts` and `client.ts`; manual: form submits through the rewrite and shows the raw result | R1–R3 |
-| **C9** | Map: probe OpenFreeMap; MapLibre v6 worker under Turbopack; routes (risk-coloured segments), checkpoints + popups, route cards + recommendation, selection sync, attribution footer | Manual on 3 trips; component tests for route card; `next build` succeeds | R10 |
-| **C10** | Heatmap layer + 0–48 h slider + play + legend | Scrub on Chicago–Denver with DevTools Performance (no long frames); no network while scrubbing | R11, R12 |
-| **C11** | Error / empty / loading / waking states end-to-end | Manual: backend stopped, invalid place, too-far departure, one-route corridor, cold start | R12, R16 |
-| **C12** **[changed]** | Deploy: Render web service (root `backend/`, `uv sync --locked`, gunicorn, `UV_VERSION`), Vercel project (root `frontend/`, `BACKEND_URL`) | Open the Vercel URL after Render has slept; plan a trip | R13, R14 |
-| **C13** | Docs: README (setup, architecture, decisions, limitations), Loom talking points | Fresh clone following README only | R15, R16 |
+| **C8** **[frontend]** | Setup + design tokens: `create-vite` react-ts, pins (§7.11), ESLint/Prettier/Vitest, `@/` alias, Vite proxy, `tokens.css`, CI frontend job, Docker service | `lint`, `typecheck`, `test`, `build` green; a token swatch test page renders in dev only | R12 |
+| **C9** **[frontend]** | `components/ui/` (§7.5 list) | RTL tests: variants, disabled/loading, labels wired to errors, combobox keyboard (APG) | R12 |
+| **C10** **[frontend]** | Layout + router: `AppLayout`, route map (§7.6), lazy routes, error boundary, 404 | Tests: unknown path → 404 page, thrown error → error page, nav links | R12 |
+| **C11** **[frontend]** | API client + hooks (§7.8, §7.9), fixtures captured from backend tests | Vitest: client error mapping for every status, hooks with mocked `fetch` | R1–R3 |
+| **C12** **[frontend]** | Screens one at a time: (a) trip form + URL state, (b) results: recommendation + route cards + checkpoint table, (c) map: routes, checkpoints, popups, selection sync, (d) heatmap layer + slider + play + legend, (e) About page | RTL per screen for every state in §7.4; manual on 3 trips; Performance trace while scrubbing (no long frames, no network) | R1–R12 |
+| **C13** | Error / empty / loading / waking states end-to-end | Manual: backend stopped, invalid place, too-far departure, one-route corridor, cold start, 503 busy | R12, R16 |
+| **C14** **[changed]** | Deploy: Render web service (root `backend/`, `uv sync --locked`, gunicorn), Vercel project (root `frontend/`, `vercel.json` rewrite to the Render URL), `NUM_PROXIES=2` | Open the Vercel URL after Render has slept; plan a trip; Lighthouse run | R13, R14 |
+| **C15** | Docs: README (setup, architecture, decisions, limitations), Loom talking points | Fresh clone following README only | R15, R16 |
 
 Backend first (C0–C7), so the 40 % logic is tested before any UI exists.
 
@@ -205,15 +217,323 @@ Backend first (C0–C7), so the 40 % logic is tested before any UI exists.
 8. **ETA time zone:** the browser's zone, with its abbreviation.
 
 **Known risks**
-9. **Proxy timeout vs cold start [new]:** Vercel's rewrite timeout is undocumented; a ~1 min Render
-   wake-up may fail the first proxied request. Mitigated by the health-check waking state.
-10. **MapLibre v6 worker under Turbopack [new]:** documented, untested; checked first in C9.
+9. **Proxy timeout vs cold start:** Vercel's CDN now waits up to **120 s** for an external origin
+   ([changelog](https://vercel.com/changelog/cdn-origin-timeout-increased-to-two-minutes)) **[frontend]**,
+   longer than a Render cold start (~1 min) and our worst plan (~40 s). The waking state stays.
+10. **MapLibre worker under Vite [frontend]:** documented (`?worker&url` import), untested; checked first in C12c.
 11. **Pinned-behind versions [new]:** TS 6, ESLint 9, Django 5.2 are deliberate (C1–C3); revisit
     when typescript-eslint / plugins / pytest-django declare support for the newer versions.
 12. Public demo servers (OSRM, Photon) have no SLA; Photon's `osm_tag` is marked deprecated **[new]**.
 13. Open-Meteo rate limit and multi-location counting are unverified; free tier is non-commercial **[new]**.
 14. No truck profile (height/weight restrictions), no Hours-of-Service breaks; sustained wind, not gusts;
     forecast hour nearest each ETA.
+
+## 7. Frontend plan (React + Vite) **[frontend]**
+
+Sources are linked inline. **UNVERIFIED** marks things not confirmed in docs or by a test yet.
+
+### 7.1 Screens, data and actions
+
+The app is one working screen plus two small pages. There is no auth, so there are no protected routes.
+
+| Screen | Shows (API data) | Main actions |
+|---|---|---|
+| **Planner** `/` | Form; recommendation + reason; warnings; route cards A–C (distance, time, arrival, miles by level, worst level); map with risk-coloured segments + checkpoint markers; checkpoint popup/table (ETA, wind/rain/snow, levels, reasons); heatmap overlay with 0–48 h slider and legend | Search and pick origin/destination; set departure, load, interval; plan; select a route (card or map); inspect a checkpoint; scrub or play the heatmap; retry; share the URL |
+| **About** `/about` | Risk table, load rules, ranking order, agreed interpretations, data sources | Read; link back to planner |
+| **Not found** `*` | Message | Link to planner |
+| **Route error** (boundary) | Friendly message | Reload / go to planner |
+
+Flow: open app → health check (waking banner if Render is asleep) → fill form → submit writes the
+trip to the URL → plan query runs (skeletons) → results + map → heatmap query runs on its own (own
+loading/error) → user selects routes, inspects checkpoints, scrubs hours.
+
+What the plan already decided and keeps: same-origin `/api` proxy, waking state, browser time zone
+for ETAs, risk-only heatmap, attribution footer, fewer than 3 routes is a warning, MapLibre used
+directly with `setPaintProperty` for the slider.
+
+### 7.2 Project setup
+
+- **Scaffold:** `npm create vite@latest frontend -- --template react-ts`, as both
+  [react.dev](https://react.dev/learn/build-a-react-app-from-scratch) and the
+  [Vite guide](https://vite.dev/guide/) give it. Vite needs Node 20.19+/22.12+; React Router 8 needs
+  **Node 22.22+** ([v8 upgrade](https://reactrouter.com/upgrading/v7)). We use Node 24 LTS locally and in CI.
+- **Lint:** the template now ships **oxlint**, not ESLint (`create-vite@9.2.1` template). We replace
+  it with ESLint as you asked, because `eslint-plugin-react-hooks` 7 carries the Rules of Hooks and the
+  React Compiler checks ([docs](https://react.dev/reference/eslint-plugin-react-hooks)).
+- **Alias `@/` → `src/`:** `tsconfig` `paths` plus Vite's native `resolve.tsconfigPaths: true`
+  ([Vite shared options](https://vite.dev/config/shared-options)), so the alias is declared once.
+- **Env:** only `VITE_*` reaches the browser, and Vite warns that it "should not contain sensitive
+  information such as API keys" ([Vite env](https://vite.dev/guide/env-and-mode)). We have one:
+  `VITE_API_BASE_URL` (default `/api`). Provider keys stay in Django. Typed in `src/vite-env.d.ts`.
+- **API proxy:** dev uses `server.proxy['/api'] → DEV_BACKEND_URL` ([Vite server
+  options](https://vite.dev/config/server-options)); production uses a `vercel.json` external rewrite
+  `/api/:path*` → Render, plus the SPA fallback `/(.*)` → `/index.html`
+  ([Vercel rewrites](https://vercel.com/docs/rewrites), [Vite on Vercel](https://vercel.com/docs/frameworks/frontend/vite)).
+  The `/api` rule comes first. Vercel caches external rewrites only if the origin sends cache
+  headers, and Django sends none, so nothing is cached.
+
+### 7.3 Design system
+
+**Palette options** (all chrome colours avoid green/yellow/orange/red/purple, which belong to the risk scale):
+
+| Option | Primary | Secondary / accent | Why | Verdict |
+|---|---|---|---|---|
+| **A. Signal Blue** | `#1d4ed8` | tonal blue `#dbeafe` / `#1e3a8a` | Blue reads as "navigation/interactive", stays clear of every risk hue, so the map's colours carry the meaning | **Recommended** |
+| B. Graphite | `#18181b` | `#2563eb` | shadcn default look, very neutral; black buttons feel heavy next to a busy map | OK |
+| C. Highway Green | `#006b3f` | `#b45309` | Interstate-sign theme, but green and amber collide with Low/Moderate/High | Rejected |
+
+**Tokens (Option A)**, as CSS variables in `src/styles/tokens.css` mapped through Tailwind `@theme inline`
+(the shadcn v4 pattern, [docs](https://ui.shadcn.com/docs/tailwind-v4)). Components use only token
+classes (`bg-primary`, `text-muted-foreground`), never hex. Contrast was computed with the WCAG
+formula; AA thresholds: text 4.5:1, large text and UI/graphics 3:1
+([1.4.3](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html),
+[1.4.11](https://www.w3.org/WAI/WCAG22/Understanding/non-text-contrast.html)).
+
+| Token | Hex | Checked against | Ratio |
+|---|---|---|---|
+| `--background` | `#f8fafc` | — | — |
+| `--surface` (cards, panels) | `#ffffff` | — | — |
+| `--foreground` (text) | `#0f172a` | background / surface | 17.1 / 17.9 ✅ |
+| `--muted-foreground` | `#475569` | background / surface | 7.2 / 7.6 ✅ |
+| `--border` (dividers, decorative) | `#e2e8f0` | — | n/a |
+| `--input` (field borders) | `#64748b` | surface | 4.8 ✅ (≥ 3) |
+| `--ring` (focus) | `#2563eb` | surface | 5.2 ✅ (≥ 3) |
+| `--primary` / `--primary-foreground` | `#1d4ed8` / `#ffffff` | each other | 6.7 ✅ |
+| `--primary-hover` | `#1e40af` | white text | 8.7 ✅ |
+| `--secondary` / `--secondary-foreground` | `#dbeafe` / `#1e3a8a` | each other | 8.5 ✅ |
+| `--success` (text on `#f0fdf4`) | `#166534` | tint | 6.8 ✅ |
+| `--warning` (text on `#fffbeb`) | `#92400e` | tint | 6.8 ✅ |
+| `--destructive` (text on `#fef2f2`; inline errors on white `#b91c1c`) | `#991b1b` | tint / surface | 7.6 / 6.5 ✅ |
+| `--info` (text on `#eff6ff`) | `#1e40af` | tint | 8.0 ✅ |
+
+**Risk scale** (map lines, badges, heatmap). Lines checked against the Positron basemap `#f2f3f0`:
+
+| Level | Line / fill | vs basemap | Badge (text on tint) | Badge ratio |
+|---|---|---|---|---|
+| Low | `#15803d` | 4.5 ✅ | `#14532d` on `#dcfce7` | 8.3 ✅ |
+| Moderate | `#a16207` (was `#ca8a04`: 2.6 ❌) | 4.4 ✅ | `#713f12` on `#fef9c3` | 8.1 ✅ |
+| High | `#ea580c` | 3.2 ✅ | `#7c2d12` on `#ffedd5` | 8.2 ✅ |
+| Severe | `#dc2626` | 4.3 ✅ | `#7f1d1d` on `#fee2e2` | 8.2 ✅ |
+| No Travel | `#581c87` | 9.8 ✅ | `#581c87` on `#f3e8ff` | 9.2 ✅ |
+
+Colour is never the only signal. Badges, popups, the checkpoint table and the legend always show the
+level name. Route lines get a white casing so adjacent levels stay separable for colour-blind users.
+
+- **Theme:** **light only.** The basemap (Positron) and the risk colours are tuned for light;
+  dark mode would need a second map style and a second contrast pass. **Overkill** for this
+  assessment. Tokens are structured so a `.dark` block could be added later.
+- **Type:** system font stack (`ui-sans-serif, system-ui, …`): no font download, so better LCP.
+  Tailwind's default scale: 12 / 14 / 16 / 18 / 20 / 24 px; weights 400/500/600/700;
+  `tabular-nums` for distances, times and ETAs.
+- **Spacing:** Tailwind's 4 px scale. **Radius:** `--radius` 8 px (sm 6, lg 12).
+  **Shadows:** `sm` cards, `md` popovers, `lg` floating map panels.
+- **Motion:** 150–200 ms transitions; heatmap playback and transitions respect `prefers-reduced-motion`.
+
+### 7.4 Layout and UX
+
+- **Breakpoints:** Tailwind defaults, mobile-first (`sm` 640, `md` 768, `lg` 1024, `xl` 1280).
+  - **< 1024 px:** one column: form → recommendation + route cards → map (60 svh) → heatmap
+    controls → checkpoint table. After a plan, focus and scroll move to the results heading.
+  - **≥ 1024 px:** a 400 px left panel (form collapses to a "Dallas → Houston · Edit" summary once
+    results exist; results scroll) and a full-height map with floating heatmap controls and legend.
+- **States per area:**
+
+| Area | Loading | Empty | Error | Success / partial |
+|---|---|---|---|---|
+| App | "Waking the server…" banner; submit disabled | — | Health keeps retrying every 3 s | Banner hidden |
+| Autocomplete | "Searching…" row | "No places found" | Inline error row | Options list |
+| Plan | 3 route-card skeletons, map dims with a status line | Intro + "Try Dallas → Houston" example | Alert mapped from `ApiError` (below) + Retry | Results; warnings shown as info alerts |
+| Heatmap | Skeleton bar on the slider | — | Inline alert in the controls; the plan stays usable | Layer + legend |
+| Checkpoint table | Row skeletons | — | — | Table |
+
+- **Error mapping** (from the Django error format `{message, extra}`):
+
+| Status | Meaning | UI |
+|---|---|---|
+| 400 | `extra.fields` | Inline errors on the matching fields |
+| 422 + `extra.latest_departure` | Beyond the forecast | Alert + "Use latest possible departure (…)" button |
+| 422 | No road connection | Alert: try different places |
+| 429 / 503 | Rate-limited (`extra.retry_after`) | Alert with a countdown; Retry enables when it ends |
+| 502 | Provider failed | Alert + Retry |
+| 0 | Network / timeout | "Can't reach the server" + Retry |
+
+- **Forms:** controlled inputs + one `validateTrip()` with the same rules as the backend serializer
+  (places picked from the list, not equal, load 1–80,000, departure −1 h … +12 days, interval 10/25/50).
+  Errors show on submit, then live per field. `aria-invalid` + `aria-describedby`. The submit button
+  shows a spinner and is disabled while loading or while the backend is waking.
+- **Accessibility:**
+  - Landmarks: `header`, `nav`, `main`, `aside`, `footer`; skip link to results.
+  - Combobox follows the [WAI-ARIA APG](https://www.w3.org/WAI/ARIA/apg/patterns/combobox/):
+    `role=combobox`, `aria-expanded`, `aria-controls`, `aria-activedescendant`, arrows/Enter/Escape.
+  - Route cards are a radio group. The slider is Radix (keyboard + ARIA built in).
+  - The map is supplementary: everything on it is also in the cards and the checkpoint table.
+  - `aria-live="polite"` status for loading and results; visible `--ring` focus on every control.
+
+### 7.5 Components and UI approach
+
+| Option | Pros | Cons | Verdict |
+|---|---|---|---|
+| **Tailwind + shadcn/ui** | Code is copied into the repo ("not a component library", [docs](https://ui.shadcn.com/docs)); Radix gives accessible slider, popover and dialog; `cva` variants; uses our CSS-variable tokens | Adds radix-ui, cva, clsx, tailwind-merge, lucide | **Pick**: only the components we use get added |
+| Plain Tailwind | Zero deps | We'd hand-build an accessible slider, plus focus management | More risk, no gain |
+| MUI / Mantine / Chakra | Fast to start | Heavier bundles, its own theming that fights Tailwind | **Overkill** |
+
+Reusable `components/ui/` (built in C9, before any screen):
+- **Controls:** `Button` (variants primary/secondary/ghost/destructive, sizes sm/md, `loading`),
+  `Input`, `Label`, `FormField` (label + control + hint + error ids), `Select` (native `<select>`:
+  accessible and mobile-friendly), `Combobox` (APG listbox pattern, async-friendly; not shadcn's
+  cmdk one, which is built for client-side filtering).
+- **Display:** `Card`, `Badge` (variant per risk level), `Alert` (info/success/warning/error, optional action).
+- **Feedback:** `Skeleton`, `Spinner`, `Slider` (shadcn/Radix).
+
+Feature components only render props and call hooks; UI components never call the API.
+
+### 7.6 Routing (React Router 8, data mode)
+
+- **Data mode** (`createBrowserRouter` + `RouterProvider`): it gives route `ErrorBoundary` and `lazy`,
+  which declarative mode lacks, without framework mode's file conventions
+  ([modes](https://reactrouter.com/start/modes)). In v8, `RouterProvider` is imported from
+  `react-router/dom` and `react-router-dom` is gone ([v8 upgrade](https://reactrouter.com/upgrading/v7)).
+- **Lazy loading:** route-level `lazy` for `/about` and `*` ([route object](https://reactrouter.com/start/data/route-object)).
+  It loads before render, so there's no Suspense flash, and it is the data-router equivalent of
+  `React.lazy`. **`React.lazy` + `Suspense`** is used for the heavy `MapView` (MapLibre) inside the
+  planner, so the form paints before the map chunk arrives. The planner itself is eager (it's the LCP route).
+- **Errors:** `ErrorBoundary` on the root (full page) and on a pathless layout child, so the header
+  and footer survive a page error; read with `useRouteError` / `isRouteErrorResponse`
+  ([error boundaries](https://reactrouter.com/how-to/error-boundary)).
+- **Navigation:** `<NavLink>` in the header and `<Link>` elsewhere. `useNavigate` is not needed: submit
+  updates search params through `useSearchParams`.
+
+| Path | Page | Layout | Loaded |
+|---|---|---|---|
+| `/` (index) | `PlannerPage` | `AppLayout` | eager; `MapView` via `React.lazy` |
+| `/about` | `AboutPage` | `AppLayout` | `lazy` |
+| `*` | `NotFoundPage` | `AppLayout` | `lazy` |
+| (error) | `RouteErrorPage` | root + layout child | eager |
+
+**Search params** (parsed and validated in `utils/trip-params.ts`; invalid or missing → no trip, form defaults):
+
+| Param | Example | Meaning |
+|---|---|---|
+| `from`, `to` | `32.7763,-96.7969` | lat,lon |
+| `fromName`, `toName` | `Dallas, Texas` | labels for the inputs |
+| `depart` | `2026-10-20T14:00:00.000Z` | ISO UTC |
+| `load`, `every` | `35000`, `10` | lb, interval mi |
+| `route` | `B` | selected route (default: recommended) |
+| `hour` | `6` | heatmap hour 0–48; written on slider release, not while dragging |
+
+Refreshing re-runs the plan (Django caches routes 1 h and weather 15 min, so it's fast and cheap).
+
+### 7.7 Folder tree
+
+```text
+frontend/
+├── index.html  vite.config.ts  vercel.json  eslint.config.js  .prettierrc.json  .env.example
+├── tsconfig.json  tsconfig.app.json  tsconfig.node.json  components.json (shadcn)
+└── src/
+    ├── main.tsx                      QueryClientProvider + RouterProvider
+    ├── vite-env.d.ts                 typed import.meta.env
+    ├── styles/                       index.css (Tailwind + @theme), tokens.css
+    ├── routes/router.tsx             route objects (§7.6)
+    ├── pages/                        PlannerPage, AboutPage, NotFoundPage, RouteErrorPage
+    ├── components/
+    │   ├── ui/                       §7.5 list
+    │   ├── layout/                   AppLayout, AppHeader, AppFooter, BackendStatusBanner
+    │   └── features/
+    │       ├── trip-form/            TripForm, PlaceCombobox, TripSummary
+    │       ├── results/              Recommendation, RouteCardList, RouteCard, RiskStrip, CheckpointTable, PlanWarnings, PlanError
+    │       ├── map/                  MapView, route-layers.ts, checkpoint-layer.ts, CheckpointPopup
+    │       └── heatmap/              HeatmapControls, HeatmapLegend, heatmap-layer.ts
+    ├── hooks/                        §7.9
+    ├── api/                          client.ts, endpoints.ts, query-keys.ts, query-client.ts
+    ├── types/api.ts                  mirrors Django output serializers
+    ├── constants/                    risk.ts (levels, labels, token names), limits.ts
+    ├── utils/                        format.ts, trip-params.ts, validate-trip.ts, cn.ts
+    └── test/                         setup.ts, fixtures/ (captured from backend tests), render.tsx
+```
+
+### 7.8 Data and API
+
+- **Client:** native `fetch` in `api/client.ts`: JSON, a 60 s timeout through `AbortSignal.timeout` +
+  `AbortSignal.any`, and one `ApiError` (`status`, `message`, `fields`, `retryAfter`, `latestDeparture`).
+  **axios is overkill** (no interceptors needed). There's no auth, so no token header and no 401 handling.
+- **Server state: TanStack Query 5.** react.dev recommends a data library over fetching in effects
+  ([react.dev](https://react.dev/learn/build-a-react-app-from-scratch)). It gives caching and dedupe
+  ([overview](https://tanstack.com/query/latest/docs/framework/react/overview)) and passes an
+  `AbortSignal` to `queryFn` ([cancellation](https://tanstack.com/query/latest/docs/framework/react/guides/query-cancellation)).
+  With trip state in the URL, the plan is a query keyed by params: back/forward is instant and the
+  heatmap is a dependent query.
+  - Defaults: `refetchOnWindowFocus: false` and no automatic refetches, because every plan spends
+    the shared Open-Meteo budget (~600 locations/min). `retry` only for status 0, once; Django already
+    retries providers.
+  - `staleTime`: plan and heatmap 15 min (the weather cache), places 24 h, health ∞ once OK.
+- **Global state:** none. URL params hold the trip; component state holds UI-only things (popup open,
+  playing). **Context/Zustand are not needed.**
+
+### 7.9 Custom hooks
+
+| Hook | Purpose | Input → returns | Used by |
+|---|---|---|---|
+| `useBackendHealth` | Wake Render and gate the form | `() → { status: 'checking' \| 'waking' \| 'ready' }` (query retries every 3 s) | `AppLayout`, `TripForm` |
+| `useDebouncedValue` | Debounce typing | `(value, ms) → value` | `PlaceCombobox` |
+| `usePlaceSearch` | Autocomplete | `(query) → { places, isFetching, error }`; enabled at ≥ 3 chars | `PlaceCombobox` |
+| `useTripParams` | Typed URL state | `() → { trip \| null, routeId, hour, setTrip, setRouteId, setHour }` | `PlannerPage` |
+| `useTripPlan` | Plan query | `(trip \| null) → { plan, status, error, refetch }` | `PlannerPage` |
+| `useHeatmap` | Heatmap query, after the plan | `(plan \| undefined, loadLb) → { heatmap, status, error }` | `PlannerPage` |
+| `useHeatmapPlayback` | Play/pause through hours | `(hours, onHour) → { playing, toggle }`; respects reduced motion | `HeatmapControls` |
+| `useRetryCountdown` | 429/503 countdown | `(seconds \| undefined) → secondsLeft` | `PlanError` |
+
+Dropped: `useLocalStorage` (the URL covers persistence) and `useAuth` (no auth). The MapLibre instance
+lives in `MapView` refs, not a hook (one user). The ESLint `react-hooks` plugin enforces the Rules of Hooks.
+
+### 7.10 Rendering and performance
+
+- **Map stays out of React's render path:** one MapLibre instance per page, created once; data goes
+  in through `setData`, and the slider changes `setPaintProperty` on the heatmap layer (one
+  property per hour, `h0`…`h48`). Dragging the slider re-renders only `HeatmapControls`.
+- **State placement:** selected route, hover and popup state live in `PlannerPage` / `MapView`, not
+  above the router. `memo` is added only where a Profiler trace shows a cost (candidate: `RouteCard` list).
+- **Keys:** `route.id`, `checkpoint.mile`, `cell lon,lat`; never array indexes.
+- **Splitting:** the map chunk (~MapLibre, the largest dependency) and `/about` are lazy. The map
+  chunk is prefetched after the health check succeeds, so it's ready by the time a plan returns.
+- **Assets:** no images besides SVG icons (lucide, tree-shaken); no web fonts.
+- **Budgets (UNVERIFIED until C8 measures them):** initial JS ≤ 150 KB gzip without the map chunk;
+  Lighthouse (desktop) Performance ≥ 90, Accessibility 100, Best Practices ≥ 95.
+- **Lint:** ESLint 10 flat config: `@eslint/js`, `typescript-eslint` (type-aware), `react-hooks`
+  (`recommended`), `react-refresh`, `@tanstack/eslint-plugin-query`, `eslint-config-prettier`.
+
+### 7.11 Packages (npm, checked 2026-10-18)
+
+Policy: the newest release that is **at least 14 days old**, so supply-chain or regression problems in
+brand-new releases have time to show (e.g. React 19.3.1 is 4 days old → 19.3.0).
+
+| Package | Version | Why |
+|---|---|---|
+| react, react-dom | 19.3.0 | UI (React Router 8 needs ≥ 19.2.7) |
+| react-router | 8.4.0 | Routing, data mode |
+| @tanstack/react-query | 5.104.1 | Server state |
+| maplibre-gl | 6.12.0 | Map (Vite worker: `?worker&url`, [docs](https://maplibre.org/maplibre-gl-js/docs/)) |
+| tailwindcss, @tailwindcss/vite | 4.3.3 | Styling ([Vite install](https://tailwindcss.com/docs/installation/using-vite)) |
+| radix-ui · class-variance-authority · clsx · tailwind-merge · lucide-react | 1.6.7 · 0.7.1 · 2.1.1 · 3.7.0 · 1.51.0 | shadcn/ui runtime deps. **UNVERIFIED** that shadcn 4.21 components accept radix-ui 1.6.7; if not, use the version the CLI installs |
+| shadcn (CLI, `npx` only) | 4.21.1 | Copies components in; not a dependency |
+| vite · @vitejs/plugin-react | 8.3.2 · 6.1.1 | Build |
+| typescript | 6.0.3 | typescript-eslint supports `<6.1` |
+| eslint · @eslint/js · typescript-eslint | 10.12.0 · 10.0.1 · 8.71.0 | Lint |
+| eslint-plugin-react-hooks · eslint-plugin-react-refresh · @tanstack/eslint-plugin-query · globals | 7.1.1 · 0.5.7 · 5.104.1 · 17.13.0 | Lint rules |
+| prettier · prettier-plugin-tailwindcss · eslint-config-prettier | 3.9.9 · 0.8.1 · 10.1.8 | Format |
+| vitest · jsdom · @testing-library/react · /dom · /jest-dom · /user-event | 5.0.3 · 30.1.1 · 16.3.3 · 10.4.2 · 7.0.1 · 14.6.7 | Tests |
+| @types/node · @types/react · @types/react-dom | 24.19.1 · 19.3.0 · 19.3.0 | Types (Node 24 LTS) |
+
+**Not adding (overkill here):** axios, Zustand/Redux, react-hook-form + zod (5 fields), MSW
+(a `fetch` spy covers our tests), Storybook, framer-motion, i18n, PWA, dark mode, Playwright, TanStack Router.
+
+### 7.12 Open questions
+
+1. **Discard the Next.js draft?** It's in the scratchpad (not committed). The plan you approved earlier said Next.js; this replaces it.
+2. **Palette A (Signal Blue)?** B is the fallback.
+3. **Light theme only?**
+4. **Include the About page?** It's cheap and shows graders the rules and assumptions in-app.
+5. **Version policy** (newest release ≥ 14 days old) OK?
+6. **Lazy loading:** route `lazy` for pages + `React.lazy` for the map, instead of `React.lazy` for every page (reason in §7.6). OK?
 
 ## Requirement IDs
 

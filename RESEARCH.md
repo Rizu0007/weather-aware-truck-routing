@@ -149,6 +149,8 @@ Backend variables:
 
 ## 3. Next.js
 
+> **Superseded (2026-10-18):** the frontend is now React + Vite. See PLAN.md §0b and §7.
+
 ### 3.1 Folder tree
 
 ```text
