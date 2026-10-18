@@ -28,7 +28,7 @@ describe("format", () => {
   it("pounds", () => expect(formatPounds(35000)).toBe("35,000 lb"));
 
   it("date-times in a given zone, with its abbreviation", () => {
-    expect(formatDateTime("2026-10-20T19:13:00Z", "America/Chicago")).toBe(
+    expect(formatDateTime("2026-10-20T19:13:00Z", { timeZone: "America/Chicago" })).toBe(
       "Tue, Oct 20, 2:13 PM CDT",
     );
   });
@@ -42,9 +42,13 @@ describe("formatClock", () => {
   const zone = "America/Chicago";
 
   it("shows the day for the first time, then only when it changes", () => {
-    expect(formatClock("2026-10-20T19:13:00Z", undefined, zone)).toBe("Tue 2:13 PM");
-    expect(formatClock("2026-10-20T20:40:00Z", "2026-10-20T19:13:00Z", zone)).toBe("3:40 PM");
-    expect(formatClock("2026-10-21T05:20:00Z", "2026-10-21T04:50:00Z", zone)).toBe("Wed 12:20 AM");
+    expect(formatClock("2026-10-20T19:13:00Z", undefined, { timeZone: zone })).toBe("Tue 2:13 PM");
+    expect(formatClock("2026-10-20T20:40:00Z", "2026-10-20T19:13:00Z", { timeZone: zone })).toBe(
+      "3:40 PM",
+    );
+    expect(formatClock("2026-10-21T05:20:00Z", "2026-10-21T04:50:00Z", { timeZone: zone })).toBe(
+      "Wed 12:20 AM",
+    );
   });
 });
 

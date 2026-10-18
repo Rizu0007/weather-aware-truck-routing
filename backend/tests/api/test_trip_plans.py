@@ -1,4 +1,5 @@
 from datetime import timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 import responses
@@ -151,3 +152,29 @@ def test_wrong_method_is_a_405(client):
 
     assert response.status_code == 405
     assert response.json()["message"] == 'Method "GET" not allowed.'
+
+
+@responses.activate
+def test_the_same_instant_in_any_time_zone_gives_the_same_plan(client):
+    # 14:00 UTC, written the way browsers in different zones might send it.
+    start = (timezone.now() + timedelta(hours=3)).replace(minute=0, second=0, microsecond=0)
+    instants = [
+        start.astimezone(ZoneInfo(zone)).isoformat()
+        for zone in (
+            "UTC",
+            "America/New_York",
+            "America/Los_Angeles",
+            "Europe/London",
+            "Asia/Karachi",
+        )
+    ]
+    mock_osrm((200, native()), [(200, via_route())] * len(instants))
+    mock_towns([town("Franklin", -96.48, 31.03), no_town(), no_town(), no_town()])
+    mock_forecast()
+
+    plans = [post(client, body(departure=instant)).json() for instant in instants]
+
+    assert len({plan["departure"] for plan in plans}) == 1
+    assert plans[0]["departure"].endswith("+00:00")  # always answered in UTC
+    etas = [[c["eta"] for c in plan["routes"][0]["checkpoints"]] for plan in plans]
+    assert all(route_etas == etas[0] for route_etas in etas)

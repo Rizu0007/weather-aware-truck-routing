@@ -16,9 +16,23 @@ export function formatPounds(pounds: number): string {
   return `${pounds.toLocaleString("en-US")} lb`;
 }
 
-/** "Tue, Oct 20, 2:13 PM CDT". `timeZone` is for tests; the app uses the browser's. */
-export function formatDateTime(iso: string, timeZone?: string): string {
-  return new Intl.DateTimeFormat("en-US", {
+/**
+ * Dates use the browser's language, so a UK user sees "14:00 BST" and a US user "2:00 PM PDT".
+ * `locale` and `timeZone` parameters are for tests; the app uses the browser's.
+ */
+const BROWSER_LOCALE = typeof navigator === "undefined" ? "en-US" : navigator.language;
+
+interface ZoneOptions {
+  timeZone?: string;
+  locale?: string;
+}
+
+/** "Tue, Oct 20, 2:13 PM CDT" (en-US) or "Tue 20 Oct, 14:13 BST" (en-GB). */
+export function formatDateTime(
+  iso: string,
+  { timeZone, locale = BROWSER_LOCALE }: ZoneOptions = {},
+): string {
+  return new Intl.DateTimeFormat(locale, {
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -30,9 +44,9 @@ export function formatDateTime(iso: string, timeZone?: string): string {
 }
 
 /** "CDT (America/Chicago)": shown next to the departure field. */
-export function describeTimeZone(date = new Date()): string {
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const abbreviation = timeZoneAbbreviation(date);
+export function describeTimeZone(date = new Date(), options: ZoneOptions = {}): string {
+  const zone = options.timeZone ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const abbreviation = timeZoneAbbreviation(date, options);
   return abbreviation ? `${abbreviation} (${zone})` : zone;
 }
 
@@ -59,29 +73,40 @@ export function nextFullHour(now = new Date()): Date {
   return next;
 }
 
-/** "7:28 PM", or "Mon 12:20 AM" when the day differs from `previousIso`'s. */
-export function formatClock(iso: string, previousIso?: string, timeZone?: string): string {
+/**
+ * A checkpoint's ETA in a table column: "7:28 PM", plus the day when it changes from
+ * `previousIso` ("Mon 12:20 AM"), plus the zone when that changes, as it does on a trip
+ * across a daylight-saving switch ("Sun 1:20 AM EST").
+ */
+export function formatClock(iso: string, previousIso?: string, options: ZoneOptions = {}): string {
+  const { timeZone, locale = BROWSER_LOCALE } = options;
   const date = new Date(iso);
-  const time = new Intl.DateTimeFormat("en-US", {
+  const time = new Intl.DateTimeFormat(locale, {
     hour: "numeric",
     minute: "2-digit",
     timeZone,
   }).format(date);
-  const day = (d: Date) =>
-    new Intl.DateTimeFormat("en-US", { weekday: "short", timeZone }).format(d);
-  const sameDay =
-    previousIso !== undefined &&
-    new Intl.DateTimeFormat("en-CA", { dateStyle: "short", timeZone }).format(date) ===
-      new Intl.DateTimeFormat("en-CA", { dateStyle: "short", timeZone }).format(
-        new Date(previousIso),
-      );
-  return sameDay ? time : `${day(date)} ${time}`;
+  const dayKey = (d: Date) =>
+    new Intl.DateTimeFormat("en-CA", { dateStyle: "short", timeZone }).format(d);
+  const previous = previousIso === undefined ? undefined : new Date(previousIso);
+
+  const parts = [time];
+  if (!previous || dayKey(previous) !== dayKey(date)) {
+    parts.unshift(new Intl.DateTimeFormat(locale, { weekday: "short", timeZone }).format(date));
+  }
+  if (previous && timeZoneAbbreviation(previous, options) !== timeZoneAbbreviation(date, options)) {
+    parts.push(timeZoneAbbreviation(date, options));
+  }
+  return parts.join(" ");
 }
 
-/** The short zone name, e.g. "CDT" or "GMT+5". */
-export function timeZoneAbbreviation(date = new Date(), timeZone?: string): string {
+/** The short zone name at that moment: "CDT", "BST" (en-GB) or "GMT+5". */
+export function timeZoneAbbreviation(
+  date = new Date(),
+  { timeZone, locale = BROWSER_LOCALE }: ZoneOptions = {},
+): string {
   return (
-    new Intl.DateTimeFormat("en-US", { timeZoneName: "short", timeZone })
+    new Intl.DateTimeFormat(locale, { timeZoneName: "short", timeZone })
       .formatToParts(date)
       .find((part) => part.type === "timeZoneName")?.value ?? ""
   );

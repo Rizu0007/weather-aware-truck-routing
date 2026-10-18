@@ -66,5 +66,8 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Test in other time zones (EDT/EST, PDT, BST/GMT, PKT, IST)
+        run: npm run test:zones
+
       - name: Build
         run: npm run build

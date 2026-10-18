@@ -18,7 +18,8 @@ export default defineConfig(({ mode }) => {
       setupFiles: ["./src/test/setup.ts"],
       restoreMocks: true,
       // Local-time conversions depend on the zone; pin it so tests pass anywhere (CI is UTC).
-      env: { TZ: "America/Chicago" },
+      // `npm run test:zones` runs the time-zone suite under other zones via TZ.
+      env: { TZ: process.env.TZ ?? "America/Chicago" },
     },
   };
 });

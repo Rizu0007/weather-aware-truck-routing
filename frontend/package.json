@@ -15,7 +15,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "test:zones": "for zone in America/New_York America/Chicago America/Los_Angeles Europe/London Asia/Karachi Asia/Kolkata; do echo \"== $zone\"; TZ=$zone vitest run src/utils/time-zones.test.ts --reporter=dot || exit 1; done"
   },
   "dependencies": {
     "@fontsource-variable/dm-sans": "5.3.0",
