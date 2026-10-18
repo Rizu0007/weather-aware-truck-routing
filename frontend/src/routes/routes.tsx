@@ -9,7 +9,9 @@ export const pageRoutes: RouteObject[] = [
   { index: true, Component: PlannerPage },
   {
     path: "*",
-    lazy: { Component: async () => (await import("@/pages/not-found-page")).NotFoundPage },
+    // Function form: the per-property form ({ Component }) briefly raises a 404 to the
+    // error boundary on a first visit while the chunk loads.
+    lazy: async () => ({ Component: (await import("@/pages/not-found-page")).NotFoundPage }),
   },
 ];
 

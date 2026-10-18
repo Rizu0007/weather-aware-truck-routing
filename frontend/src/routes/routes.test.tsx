@@ -60,6 +60,16 @@ describe("routes", () => {
     expect(screen.getByRole("contentinfo")).toBeInTheDocument();
   });
 
+  it("never shows the error page for an unknown path", async () => {
+    const consoleError = vi.spyOn(console, "error");
+
+    renderAt("/no/such/page");
+    await screen.findByRole("link", { name: "Plan a trip" }); // only the 404 page has it
+
+    expect(screen.queryByRole("button", { name: "Reload" })).not.toBeInTheDocument();
+    expect(consoleError).not.toHaveBeenCalled(); // RouteErrorPage logs whatever it catches
+  });
+
   it("the header logo links home", async () => {
     const router = renderAt("/no/such/page");
     await screen.findByRole("heading", { name: "This page doesn't exist" });
