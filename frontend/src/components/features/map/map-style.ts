@@ -6,6 +6,7 @@ import { RISK_LEVELS, type RiskLevel } from "@/constants/risk";
 export const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/dark";
 
 export const SOURCES = {
+  heatmap: "heatmap",
   segments: "risk-segments",
   routes: "routes",
   checkpoints: "checkpoints",
@@ -13,6 +14,7 @@ export const SOURCES = {
 } as const;
 
 export const LAYERS = {
+  heatmap: "heatmap",
   casing: "route-casing",
   risk: "route-risk",
   hit: "route-hit",
@@ -137,4 +139,39 @@ export function selectionPaint(selectedId: string) {
 /** Draw the selected route on top of the others. */
 export function sortKey(selectedId: string) {
   return expression<number>(["case", isSelected(selectedId), 1, 0]);
+}
+
+// Low cells are a faint tint (the corridor stays visible without hiding the basemap);
+// anything riskier is clearly coloured.
+const HEATMAP_LOW_OPACITY = 0.12;
+const HEATMAP_RISK_OPACITY = 0.42;
+
+/** Heatmap fill paint for one hour; the slider re-applies it with a new hour. */
+export function heatmapPaint(hour: number) {
+  const colors = riskColors();
+  const score = ["get", `h${hour}`];
+  return {
+    "fill-color": expression<string>([
+      "match",
+      score,
+      ...RISK_LEVELS.flatMap((level, index) => [index, colors[level]]),
+      "rgba(0, 0, 0, 0)",
+    ]),
+    "fill-opacity": expression<number>([
+      "case",
+      ["<=", score, 0],
+      HEATMAP_LOW_OPACITY,
+      HEATMAP_RISK_OPACITY,
+    ]),
+  };
+}
+
+/** Under the routes, so they stay readable over any weather. */
+export function heatmapLayer(hour: number): AddLayerObject {
+  return {
+    id: LAYERS.heatmap,
+    type: "fill",
+    source: SOURCES.heatmap,
+    paint: { ...heatmapPaint(hour), "fill-antialias": false },
+  };
 }

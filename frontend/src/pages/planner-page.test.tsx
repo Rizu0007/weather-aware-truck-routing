@@ -7,32 +7,44 @@ import { describe, expect, it, vi } from "vitest";
 import type { MapViewProps } from "@/components/features/map/map-view";
 import { createRoutes } from "@/routes/routes";
 import { createQueryWrapper, jsonResponse, mockFetch } from "@/test/api";
+import heatmapFixture from "@/test/fixtures/heatmap.json";
 import tripPlan from "@/test/fixtures/trip-plan.json";
 import { tripSearchParams, type TripParams } from "@/utils/trip-params";
 
 // MapLibre needs WebGL, which jsdom lacks; a stand-in shows what the map is given and
 // lets tests "click" it, so the map <-> table wiring is still tested.
-vi.mock("@/components/features/map/map-view", () => ({
-  default: (props: MapViewProps) => (
-    <div
-      data-testid="map"
-      data-selected={props.selectedId}
-      data-active={props.activeMile ?? ""}
-      data-hover={props.hoverMile ?? ""}
-    >
-      <button onClick={() => props.onSelectRoute("A")}>map: click route A</button>
-      <button
-        onClick={() =>
-          props.onActivateCheckpoint(
-            props.routes.find((r) => r.id === props.selectedId)!.checkpoints[2].mile,
-          )
-        }
-      >
-        map: click checkpoint 3
-      </button>
-    </div>
-  ),
-}));
+const mapCalls = { heatmapHours: [] as number[] };
+vi.mock("@/components/features/map/map-view", async () => {
+  const { useImperativeHandle } = await import("react");
+  return {
+    default: function MapStub(props: MapViewProps) {
+      useImperativeHandle(props.ref, () => ({
+        setHeatmapHour: (hour: number) => mapCalls.heatmapHours.push(hour),
+      }));
+      return (
+        <div
+          data-testid="map"
+          data-selected={props.selectedId}
+          data-active={props.activeMile ?? ""}
+          data-hover={props.hoverMile ?? ""}
+          data-heatmap-cells={props.heatmap?.cells.length ?? 0}
+          data-heatmap-visible={String(props.heatmapVisible)}
+        >
+          <button onClick={() => props.onSelectRoute("A")}>map: click route A</button>
+          <button
+            onClick={() =>
+              props.onActivateCheckpoint(
+                props.routes.find((r) => r.id === props.selectedId)!.checkpoints[2].mile,
+              )
+            }
+          >
+            map: click checkpoint 3
+          </button>
+        </div>
+      );
+    },
+  };
+});
 
 const TRIP: TripParams = {
   origin: { label: "Dallas, Texas", lat: 32.7767, lon: -96.797 },
@@ -291,5 +303,60 @@ describe("PlannerPage: map", () => {
     await userEvent.click(screen.getByRole("radio", { name: /Route A/ }));
 
     expect(screen.getByTestId("map")).toHaveAttribute("data-active", "");
+  });
+});
+
+describe("PlannerPage: heatmap", () => {
+  it("loads the grid for the plan's routes and puts it on the map", async () => {
+    const { fetch } = renderPlanner(SHARED, {
+      "/api/trip-plans": tripPlan,
+      "/api/heatmaps": heatmapFixture,
+    });
+
+    await waitFor(() =>
+      expect(screen.getByTestId("map")).toHaveAttribute("data-heatmap-cells", "111"),
+    );
+    const post = fetch.mock.calls.find(([input]) => input === "/api/heatmaps");
+    const body = JSON.parse(post?.[1]?.body as string) as { routes: unknown[]; load_lb: number };
+    expect(body.routes).toHaveLength(2);
+    expect(body.load_lb).toBe(35_000);
+  });
+
+  it("the slider restyles the map directly and saves the hour in the URL", async () => {
+    mapCalls.heatmapHours = [];
+    const { router } = renderPlanner(SHARED, {
+      "/api/trip-plans": tripPlan,
+      "/api/heatmaps": heatmapFixture,
+    });
+    const slider = await screen.findByRole("slider", { name: "Forecast hour after departure" });
+
+    slider.focus();
+    await userEvent.keyboard("{ArrowRight}{ArrowRight}{ArrowRight}");
+
+    expect(mapCalls.heatmapHours).toEqual([1, 2, 3]);
+    expect(new URLSearchParams(router.state.location.search).get("hour")).toBe("3");
+  });
+
+  it("a heatmap failure doesn't touch the plan", async () => {
+    renderPlanner(SHARED, {
+      "/api/trip-plans": tripPlan,
+      "/api/heatmaps": jsonResponse(
+        errorBody("The weather or routing service is busy. Please try again in a minute.", {
+          retry_after: 60,
+        }),
+        503,
+      ),
+    });
+
+    expect(await screen.findByText(/The weather or routing service is busy/)).toBeInTheDocument();
+    expect(screen.getByText("Take route B")).toBeInTheDocument();
+  });
+
+  it("hiding the heatmap tells the map", async () => {
+    renderPlanner(SHARED, { "/api/trip-plans": tripPlan, "/api/heatmaps": heatmapFixture });
+
+    await userEvent.click(await screen.findByRole("checkbox", { name: "Show on map" }));
+
+    expect(screen.getByTestId("map")).toHaveAttribute("data-heatmap-visible", "false");
   });
 });

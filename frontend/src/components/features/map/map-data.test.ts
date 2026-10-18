@@ -5,9 +5,11 @@ import {
   checkpointIndex,
   checkpointPoints,
   endpoints,
+  heatmapCells,
   riskSegments,
   routeLines,
 } from "@/components/features/map/map-data";
+import heatmapFixture from "@/test/fixtures/heatmap.json";
 import tripPlan from "@/test/fixtures/trip-plan.json";
 import type { TripPlan } from "@/types/api";
 
@@ -61,5 +63,31 @@ describe("map data", () => {
     expect(north).toBe(Math.max(...all.map(([, lat]) => lat)));
     expect(east).toBeGreaterThan(west);
     expect(north).toBeGreaterThan(south);
+  });
+});
+
+describe("heatmap cells", () => {
+  const heatmap = heatmapFixture;
+
+  it("draws each cell as a square centred on it", () => {
+    const [first] = heatmapCells(heatmap).features;
+    const { lon, lat } = heatmap.cells[0];
+    const half = heatmap.cell_deg / 2;
+
+    expect(first.geometry.coordinates[0]).toEqual([
+      [lon - half, lat - half],
+      [lon + half, lat - half],
+      [lon + half, lat + half],
+      [lon - half, lat + half],
+      [lon - half, lat - half],
+    ]);
+  });
+
+  it("carries the risk for every hour, so the slider only restyles", () => {
+    const features = heatmapCells(heatmap).features;
+    const stormy = heatmap.cells.findIndex((cell) => cell.risk.includes(4));
+
+    expect(Object.keys(features[0].properties ?? {})).toHaveLength(heatmap.hours);
+    expect(features[stormy].properties?.[`h${heatmap.cells[stormy].risk.indexOf(4)}`]).toBe(4);
   });
 });

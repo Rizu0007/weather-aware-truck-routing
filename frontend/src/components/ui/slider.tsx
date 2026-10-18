@@ -7,8 +7,12 @@ import { cn } from "@/utils/cn";
 export function Slider({
   className,
   "aria-label": ariaLabel,
+  valueText,
   ...props
-}: ComponentProps<typeof SliderPrimitive.Root>) {
+}: ComponentProps<typeof SliderPrimitive.Root> & {
+  /** Read out instead of the bare number, e.g. "+6 h, Tue 9:00 PM". */
+  valueText?: string;
+}) {
   return (
     <SliderPrimitive.Root
       className={cn(
@@ -22,6 +26,7 @@ export function Slider({
       </SliderPrimitive.Track>
       <SliderPrimitive.Thumb
         aria-label={ariaLabel}
+        aria-valuetext={valueText}
         className="block size-5 rounded-full border-2 border-primary bg-background shadow-card transition-transform hover:scale-110 focus-visible:ring-4 focus-visible:ring-ring/30 focus-visible:outline-none"
       />
     </SliderPrimitive.Root>

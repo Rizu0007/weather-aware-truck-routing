@@ -1,6 +1,6 @@
-import type { Feature, FeatureCollection, LineString, Point } from "geojson";
+import type { Feature, FeatureCollection, LineString, Point, Polygon } from "geojson";
 
-import type { Checkpoint, LonLat, PlannedRoute } from "@/types/api";
+import type { Checkpoint, Heatmap, LonLat, PlannedRoute } from "@/types/api";
 
 // Pure builders from API data to GeoJSON, so they can be tested without WebGL.
 
@@ -82,4 +82,33 @@ export function boundsOf(routes: PlannedRoute[]): [LonLat, LonLat] {
 
 export function checkpointIndex(route: PlannedRoute, mile: number | null): number {
   return mile === null ? -1 : route.checkpoints.findIndex((c: Checkpoint) => c.mile === mile);
+}
+
+/** One square per heatmap cell, with its risk score for every hour as h0 … h48. */
+export function heatmapCells(heatmap: Heatmap): FeatureCollection<Polygon> {
+  const half = heatmap.cell_deg / 2;
+  return {
+    type: "FeatureCollection",
+    features: heatmap.cells.map((cell, index) => {
+      const { lon, lat } = cell;
+      const hours = Object.fromEntries(cell.risk.map((score, hour) => [`h${hour}`, score]));
+      return {
+        type: "Feature",
+        id: index,
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [lon - half, lat - half],
+              [lon + half, lat - half],
+              [lon + half, lat + half],
+              [lon - half, lat + half],
+              [lon - half, lat - half],
+            ],
+          ],
+        },
+        properties: hours,
+      };
+    }),
+  };
 }

@@ -11,7 +11,7 @@ import {
 } from "maplibre-gl";
 import type { GeoJSON } from "geojson";
 import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useImperativeHandle, useRef, useState, type Ref } from "react";
 import { createPortal } from "react-dom";
 
 import { CheckpointPopup } from "@/components/features/map/checkpoint-popup";
@@ -20,18 +20,21 @@ import {
   checkpointIndex,
   checkpointPoints,
   endpoints,
+  heatmapCells,
   riskSegments,
   routeLines,
 } from "@/components/features/map/map-data";
 import {
   BASEMAP_STYLE,
+  heatmapLayer,
+  heatmapPaint,
   LAYERS,
   routeLayers,
   selectionPaint,
   sortKey,
   SOURCES,
 } from "@/components/features/map/map-style";
-import type { PlannedRoute } from "@/types/api";
+import type { Heatmap, PlannedRoute } from "@/types/api";
 
 // Vite needs the worker's URL spelled out (MapLibre docs, "Vite").
 setWorkerUrl(workerUrl);
@@ -43,7 +46,13 @@ interface GeoJSONSourceLike {
   setData(data: GeoJSON): Promise<void>;
 }
 
+/** Imperative controls, so scrubbing the heatmap doesn't re-render React. */
+export interface MapHandle {
+  setHeatmapHour: (hour: number) => void;
+}
+
 export interface MapViewProps {
+  ref?: Ref<MapHandle>;
   routes: PlannedRoute[];
   selectedId: string;
   /** Mile of the checkpoint whose popup is open. */
@@ -52,6 +61,10 @@ export interface MapViewProps {
   hoverMile: number | null;
   onSelectRoute: (id: string) => void;
   onActivateCheckpoint: (mile: number | null) => void;
+  heatmap?: Heatmap;
+  heatmapVisible?: boolean;
+  /** Hour shown when the heatmap first appears; later changes go through the handle. */
+  initialHour?: number;
 }
 
 function supportsWebGL(): boolean {
@@ -63,12 +76,16 @@ function supportsWebGL(): boolean {
 }
 
 export default function MapView({
+  ref,
   routes,
   selectedId,
   activeMile,
   hoverMile,
   onSelectRoute,
   onActivateCheckpoint,
+  heatmap,
+  heatmapVisible = true,
+  initialHour = 0,
 }: MapViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
@@ -76,6 +93,18 @@ export default function MapView({
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(() => !supportsWebGL());
   const selected = routes.find((route) => route.id === selectedId) ?? routes[0];
+  const hour = useRef(initialHour);
+
+  useImperativeHandle(ref, () => ({
+    setHeatmapHour(next: number) {
+      hour.current = next;
+      const instance = map.current;
+      if (!instance?.getLayer(LAYERS.heatmap)) return;
+      const paint = heatmapPaint(next);
+      instance.setPaintProperty(LAYERS.heatmap, "fill-color", paint["fill-color"]);
+      instance.setPaintProperty(LAYERS.heatmap, "fill-opacity", paint["fill-opacity"]);
+    },
+  }));
 
   // Handlers registered once on the map read the latest props through refs.
   const latest = useRef({ onSelectRoute, onActivateCheckpoint, selected });
@@ -111,6 +140,11 @@ export default function MapView({
         ?.querySelector(".maplibregl-ctrl-attrib")
         ?.classList.remove("maplibregl-compact-show");
       const { selected: route } = latest.current;
+      instance.addSource(SOURCES.heatmap, {
+        type: "geojson",
+        data: { type: "FeatureCollection", features: [] },
+      });
+      instance.addLayer(heatmapLayer(hour.current));
       instance.addSource(SOURCES.segments, { type: "geojson", data: riskSegments(routes) });
       instance.addSource(SOURCES.routes, { type: "geojson", data: routeLines(routes) });
       instance.addSource(SOURCES.checkpoints, { type: "geojson", data: checkpointPoints(route) });
@@ -180,6 +214,19 @@ export default function MapView({
       instance.setLayoutProperty(layer, "line-sort-key", sortKey(selected.id));
     }
   }, [loaded, selected]);
+
+  // Heatmap data arrives after the plan; it's loaded once and restyled per hour.
+  useEffect(() => {
+    const instance = map.current;
+    if (!loaded || !instance || !heatmap) return;
+    void source(instance, SOURCES.heatmap)?.setData(heatmapCells(heatmap));
+  }, [loaded, heatmap]);
+
+  useEffect(() => {
+    const instance = map.current;
+    if (!loaded || !instance) return;
+    instance.setLayoutProperty(LAYERS.heatmap, "visibility", heatmapVisible ? "visible" : "none");
+  }, [loaded, heatmapVisible]);
 
   // Hovered or active checkpoint: enlarged marker.
   useEffect(() => {

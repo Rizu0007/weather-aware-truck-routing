@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
+import type { MapHandle } from "@/components/features/map/map-view";
+import { HeatmapControls } from "@/components/features/heatmap/heatmap-controls";
 import { CheckpointTable } from "@/components/features/results/checkpoint-table";
 import { PlanError } from "@/components/features/results/plan-error";
 import { PlanSkeleton } from "@/components/features/results/plan-skeleton";
@@ -15,7 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useBackendHealth } from "@/hooks/use-backend-health";
 import { useDelayedFlag } from "@/hooks/use-delayed-flag";
 import { useTripParams } from "@/hooks/use-trip-params";
-import { useTripPlan } from "@/hooks/use-trip-plan";
+import { useHeatmap, useTripPlan } from "@/hooks/use-trip-plan";
 import { nextFullHour } from "@/utils/format";
 import type { TripParams } from "@/utils/trip-params";
 import { serverFieldErrors } from "@/utils/validate-trip";
@@ -41,7 +43,7 @@ function exampleTrip(): TripParams {
 
 export function PlannerPage() {
   const backend = useBackendHealth();
-  const { trip, invalidLink, routeId, setTrip, setRouteId } = useTripParams();
+  const { trip, invalidLink, routeId, hour, setTrip, setRouteId, setHour } = useTripParams();
   const plan = useTripPlan(trip);
   const slowPlan = useDelayedFlag(plan.isFetching, SLOW_PLAN_MS);
   const [editing, setEditing] = useState(trip === null);
@@ -53,6 +55,9 @@ export function PlannerPage() {
   const showForm = !trip || editing || error?.kind === "validation";
   const data = plan.isFetching ? undefined : plan.data;
   const selected = data?.routes.find((route) => route.id === routeId) ?? data?.routes[0];
+  const heatmap = useHeatmap(data);
+  const mapHandle = useRef<MapHandle>(null);
+  const [heatmapVisible, setHeatmapVisible] = useState(true);
   const scope = `${plan.dataUpdatedAt}:${selected?.id}`;
   const [active, setActive] = useState<ScopedMile>(null);
   const [hover, setHover] = useState<ScopedMile>(null);
@@ -166,6 +171,10 @@ export function PlannerPage() {
               }
             >
               <MapView
+                ref={mapHandle}
+                heatmap={heatmap.data}
+                heatmapVisible={heatmapVisible}
+                initialHour={hour}
                 routes={data.routes}
                 selectedId={selected.id}
                 activeMile={activeMile}
@@ -175,6 +184,21 @@ export function PlannerPage() {
               />
             </Suspense>
           </section>
+        )}
+        {data && (
+          <HeatmapControls
+            // A new plan starts from its own hour (from the URL, else 0).
+            key={plan.dataUpdatedAt}
+            heatmap={heatmap.data}
+            loading={heatmap.isFetching}
+            error={heatmap.error}
+            onRetry={() => void heatmap.refetch()}
+            visible={heatmapVisible}
+            onVisibleChange={setHeatmapVisible}
+            initialHour={hour}
+            onHourChange={(next) => mapHandle.current?.setHeatmapHour(next)}
+            onHourCommit={setHour}
+          />
         )}
         {data && selected && (
           <section aria-labelledby="checkpoints-heading" className="flex flex-col gap-3">
