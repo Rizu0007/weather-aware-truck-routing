@@ -579,6 +579,61 @@ updates), `swr` 2.5.1 / `@tanstack/react-query` 5.104.4 (no caching or revalidat
 
 ---
 
+## 12. Map and extras (researched 2026-10-18, before C12c)
+
+### 12.1 What the brief needs from the map
+"Show all routes, checkpoints, risk levels, ETAs, and route summaries **on a map**" and "a weather
+heatmap along the trip corridor with a 0–48 hour forecast slider" (ASSESSMENT.md). The table and the
+cards stay as the text version; the map is required, not optional.
+
+### 12.2 How to draw each thing (MapLibre GL JS)
+
+| Need | Technique | Source | Why not the alternative |
+|---|---|---|---|
+| Route coloured by risk | One GeoJSON `line` layer over the backend's `segments` (one feature per stretch, `level` property); `line-color` = `["match", ["get", "level"], "low", …]` | [expressions](https://maplibre.org/maplibre-style-spec/expressions/), example `style-lines-with-a-data-driven-property` | `line-gradient` can't use data-driven styling and needs `lineMetrics` ([layers spec](https://maplibre.org/maplibre-style-spec/layers/)) |
+| Separate adjacent levels, colour-blind safe | A wider dark casing layer under the coloured line (PLAN §7.3) | — | — |
+| Selected vs other routes | `feature-state` (`selected`, `hover`) in `line-width` / `line-opacity` paint; features need an `id` | [hover example](https://maplibre.org/maplibre-gl-js/docs/examples/create-a-hover-effect/), [Map API](https://maplibre.org/maplibre-gl-js/docs/API/classes/Map/) | Re-adding layers or `setData` on every click: more work for the same result. `feature-state` works only in paint properties, not filters |
+| Click a route / checkpoint | `map.on("click", layerId, …)` + `e.features` | [Map API](https://maplibre.org/maplibre-gl-js/docs/API/classes/Map/) | — |
+| Checkpoint details | `circle` layer + a `Popup` on click (ETA, wind/rain/snow, level, reasons) | example `display-a-popup-on-click` | DOM `Marker` per checkpoint: hundreds of DOM nodes on long trips |
+| Frame the trip | `fitBounds` over all route coordinates, with padding for panels | example `fit-to-the-bounds-of-a-linestring` | — |
+| Heatmap of risk by hour | `fill` layer of grid squares (choropleth); each cell carries `h0`…`h48`; the slider calls `setPaintProperty("fill-color", match on ["get", "h"+hour])` | [time-slider example](https://maplibre.org/maplibre-gl-js/docs/examples/create-a-time-slider/) (data loaded once, the slider only changes a style) | MapLibre's `heatmap` layer shows point **density** ([layers spec](https://maplibre.org/maplibre-style-spec/layers/)), so it would glow where cells are dense, not where risk is high |
+| Basemap | OpenFreeMap `dark`: free, no key, unlimited views, attribution required, commercial use allowed | [openfreemap.org](https://openfreemap.org/) | Label legibility on `dark` is checked in C12c (PLAN risk 10) |
+
+### 12.3 React integration
+- **Use MapLibre directly** in one `MapView` component (refs + effects), as PLAN §7.10 decided.
+  `react-map-gl` supports MapLibre (`react-map-gl/maplibre`, [docs](https://visgl.github.io/react-map-gl/docs/get-started)),
+  but it's a declarative wrapper. Our hot path (the slider) is one imperative `setPaintProperty`
+  call per frame, and a wrapper adds a layer to reason about without helping that. **UNVERIFIED:**
+  react-map-gl's own performance guidance on its state-management page was not read.
+- The map module is lazy-loaded (`React.lazy`) so the form paints first (PLAN §7.6).
+
+### 12.4 Accessibility
+- WCAG 1.1.1 needs a text alternative with an equivalent purpose. For maps that means the same data
+  as a list or table next to the map: our route cards + checkpoint table
+  ([accessinghigherground.org](https://accessinghigherground.org/?p=39516),
+  [Maryland mapping standard](https://mdod.maryland.gov/news/Documents/Maryland%20Digital%20Mapping%20Accessibility%20Standards%20-%202022%20final%20(2).docx)).
+- Keyboard: route selection already works through the cards (radios); the map must not trap focus
+  (SC 2.1.2, [BOIA](https://www.boia.org/blog/interactive-maps-and-accessibility-4-tips)).
+- Graphics need 3:1 contrast (SC 1.4.11): done for the risk colours on the dark basemap (PLAN §7.3).
+- Caveat: these are practitioner and vendor guides, not the WCAG text itself.
+
+### 12.5 Layout
+Map above the checkpoint table (desktop right column; phone: cards → map → table). Full-screen
+map with floating panels is more app-like but cramps the table and costs more; tabs hide one
+view. Recommended: map above table.
+
+### 12.6 Extras: what comparable products do, and the cost for us
+
+| Extra | Seen in | How we'd build it | Cost |
+|---|---|---|---|
+| **Map ↔ table link** (hover a row highlights its marker; click a marker highlights the row) | Common in route planners | `feature-state` on the checkpoint layer; row `onMouseEnter` | Small, no new data |
+| **Risk profile** (risk along the miles, like an elevation profile) | Elevation profiles in route planners | Plain SVG from the existing `segments` (no chart library); hover syncs with the map | Small, no new data |
+| **Best departure time** ("leave 3 h later to avoid 40 High miles") | [Weather on the Way](https://weatherontheway.app/weather-forecast-for-truckers) sets a departure up to 7 days out and "suggests the clearest weather window"; a review praises its departure slider over Drive Weather ([iMore](https://www.imore.com/planning-road-trip-weather-way-shows-you-weather-youll-deal-along-way)). Fleet tools such as [WeatherOptics](https://marketplace.gomotive.com/app/weatheroptics) flag weather delay risk up to 7 days out | Backend: for departures +0, +2, +4, +6, +8, +12 h, shift the same checkpoints' ETAs and score each with the ranking we already have. The weather comes from **one** Open-Meteo request with a longer window (it counts locations, not hours, API_NOTES §2) | Medium; almost no extra weather budget |
+| **Demo with real weather** for the Loom | — | On recording day, pick a corridor that has wind/rain in the forecast | None |
+
+Not recommended now: radar imagery (another provider and licence), turn-by-turn directions (not
+asked), live re-routing (needs a moving truck).
+
 ## Appendix: how versions were obtained
 
 ```bash
