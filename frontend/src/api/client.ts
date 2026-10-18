@@ -48,6 +48,12 @@ export class ApiError extends Error {
     );
   }
 
+  /** When a used-up hourly or daily quota resets ("busy" only); retrying before then is pointless. */
+  get resetsAt(): string | undefined {
+    const value = this.extra.resets_at;
+    return typeof value === "string" ? value : undefined;
+  }
+
   /** ISO time from a "beyond_forecast" error: the latest departure that still works. */
   get latestDeparture(): string | undefined {
     const value = this.extra.latest_departure;

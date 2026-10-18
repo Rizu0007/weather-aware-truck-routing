@@ -280,10 +280,15 @@ export default function MapView({
   // Heatmap data arrives after the plan; it's loaded once, then each hour only redraws.
   useEffect(() => {
     if (!loaded || !heatmap) return;
-    field.current?.setHour(hour.current);
-    field.current?.setHeatmap(heatmap);
-    wind.current?.setHour(hour.current);
-    wind.current?.setHeatmap(heatmap);
+    // Weather drawing is extra: if it fails, keep the routes, the map and the page working.
+    try {
+      field.current?.setHour(hour.current);
+      field.current?.setHeatmap(heatmap);
+      wind.current?.setHour(hour.current);
+      wind.current?.setHeatmap(heatmap);
+    } catch (error) {
+      console.warn("Weather layer failed", error);
+    }
   }, [loaded, heatmap]);
 
   useEffect(() => {

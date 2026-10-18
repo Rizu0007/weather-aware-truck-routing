@@ -3,6 +3,7 @@
 import logging
 import re
 import time
+from collections.abc import Callable
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -32,9 +33,16 @@ _session.headers["User-Agent"] = USER_AGENT
 
 
 def get_json(
-    provider: str, url: str, params: dict | list, accept: frozenset[int] = frozenset({200})
+    provider: str,
+    url: str,
+    params: dict | list,
+    accept: frozenset[int] = frozenset({200}),
+    rate_limit: Callable[[requests.Response], ProviderBusyError | None] | None = None,
 ) -> dict | list:
-    """Retries network errors and 5xx; any other status outside `accept` fails at once."""
+    """Retries network errors and 5xx; any other status outside `accept` fails at once.
+
+    `rate_limit` lets a provider explain its own 429 (e.g. which quota ran out).
+    """
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             response = _session.get(url, params=params, timeout=TIMEOUT_S)
@@ -48,6 +56,8 @@ def get_json(
             extra = {"status": response.status_code}
             if response.status_code == 429:
                 logger.warning("%s rate limit reached: %s", provider, failure)
+                if rate_limit and (explained := rate_limit(response)):
+                    raise explained
                 raise ProviderBusyError(
                     provider, extra=extra | {"retry_after": _retry_after(response)}
                 )

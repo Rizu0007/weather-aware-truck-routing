@@ -9,6 +9,7 @@ import { createRoutes } from "@/routes/routes";
 import { createQueryWrapper, jsonResponse, mockFetch } from "@/test/api";
 import heatmapFixture from "@/test/fixtures/heatmap.json";
 import tripPlan from "@/test/fixtures/trip-plan.json";
+import { formatDateTime } from "@/utils/format";
 import { tripSearchParams, type TripParams } from "@/utils/trip-params";
 
 // MapLibre needs WebGL, which jsdom lacks; a stand-in shows what the map is given and
@@ -275,6 +276,25 @@ describe("PlannerPage: errors", () => {
     await userEvent.click(await screen.findByRole("button", { name: /Leave .* instead/ }));
 
     expect(new URLSearchParams(router.state.location.search).get("depart")).toBe(latest);
+  });
+
+  it("a used-up daily quota says when it resets, with no pointless retry", async () => {
+    const resetsAt = "2026-10-20T00:00:00+00:00";
+    renderPlanner(SHARED, {
+      "/api/trip-plans": jsonResponse(
+        errorBody("The free weather service's daily limit is used up. It resets at midnight UTC.", {
+          provider: "open-meteo",
+          limit: "daily",
+          retry_after: 18_000,
+          resets_at: resetsAt,
+        }),
+        503,
+      ),
+    });
+
+    const alert = await screen.findByText(/daily limit is used up/);
+    expect(alert).toHaveTextContent(`That's ${formatDateTime(resetsAt)} for you.`);
+    expect(screen.queryByRole("button", { name: /Retry/ })).not.toBeInTheDocument();
   });
 
   it("busy: counts down, then allows a retry", async () => {

@@ -63,3 +63,13 @@ describe("weatherField", () => {
     expect(windY[0]).toBeCloseTo(20);
   });
 });
+
+it("an older backend without wind direction still gives a field (wind from the west)", () => {
+  const cell = cellAt(-96.25, 31.25, 20);
+  delete cell.wind_from_deg;
+  const heatmap = { ...HEATMAP, cell_deg: 0.5, cells: [cell] };
+
+  const { windX } = weatherField(heatmap, fieldGrid(heatmap), 0);
+
+  expect(windX[0]).toBeCloseTo(20);
+});

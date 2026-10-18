@@ -4,11 +4,12 @@ from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
+import requests
 from django.conf import settings
 from django.core.cache import cache
 
 from trips.domain.geo import Coord
-from trips.exceptions import ProviderError
+from trips.exceptions import ProviderBusyError, ProviderError
 from trips.integrations.http import get_json
 
 PROVIDER = "open-meteo"
@@ -90,7 +91,7 @@ def _fetch_batch(coords: list[Coord], start: datetime, hours: int) -> dict[Coord
     if settings.OPEN_METEO_API_KEY:
         params["apikey"] = settings.OPEN_METEO_API_KEY
 
-    body = get_json(PROVIDER, settings.OPEN_METEO_URL, params)
+    body = get_json(PROVIDER, settings.OPEN_METEO_URL, params, rate_limit=_quota_error)
     # One location comes back as an object, several as a list.
     locations = [body] if isinstance(body, dict) else body
     if not isinstance(locations, list) or len(locations) != len(coords):
@@ -99,6 +100,36 @@ def _fetch_batch(coords: list[Coord], start: datetime, hours: int) -> dict[Coord
         coord: _parse_location(location, start, hours)
         for coord, location in zip(coords, locations, strict=True)
     }
+
+
+def _quota_error(response: requests.Response) -> ProviderBusyError | None:
+    """The free tier also has hourly and daily quotas; their 429 says which, and waiting a
+    minute won't help, so tell the user when it resets."""
+    try:
+        reason = str(response.json().get("reason", ""))
+    except ValueError:
+        return None
+    now = datetime.now(UTC)
+    if reason.startswith("Daily"):
+        resets = (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        message = "The free weather service's daily limit is used up. It resets at midnight UTC."
+        limit = "daily"
+    elif reason.startswith("Hourly"):
+        resets = (now + timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
+        message = "The free weather service's hourly limit is used up. It resets on the hour."
+        limit = "hourly"
+    else:
+        return None
+    return ProviderBusyError(
+        PROVIDER,
+        message,
+        extra={
+            "status": 429,
+            "limit": limit,
+            "retry_after": round((resets - now).total_seconds()),
+            "resets_at": resets.isoformat(),
+        },
+    )
 
 
 def _parse_location(location: dict, start: datetime, hours: int) -> HourlySeries:

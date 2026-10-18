@@ -93,8 +93,9 @@ export interface HeatmapCell extends Point {
   wind_mph: (number | null)[];
   rain_in_hr: (number | null)[];
   snow_in_hr: (number | null)[];
-  /** Degrees the wind blows from, clockwise from north; only drawn, never scored. */
-  wind_from_deg: (number | null)[];
+  /** Degrees the wind blows from, clockwise from north; only drawn, never scored.
+   *  Absent from older backends, so a deploy of one side first doesn't break the map. */
+  wind_from_deg?: (number | null)[];
 }
 
 export interface Heatmap {

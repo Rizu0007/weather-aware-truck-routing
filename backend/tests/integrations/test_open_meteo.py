@@ -6,7 +6,7 @@ from django.conf import settings
 
 from tests.conftest import load_sample
 from tests.mocks import mock_forecast
-from trips.exceptions import ProviderError
+from trips.exceptions import ProviderBusyError, ProviderError
 from trips.integrations import open_meteo
 from trips.integrations.open_meteo import hourly, snap
 
@@ -199,3 +199,56 @@ def test_snap_rounds_to_the_grid():
 def test_rejects_naive_start():
     with pytest.raises(ValueError, match="timezone-aware"):
         hourly([DALLAS], datetime(2026, 10, 17, 21), 3)
+
+
+@responses.activate
+@pytest.mark.parametrize(
+    ("reason", "limit", "resets_at", "retry_after"),
+    [
+        # Open-Meteo's real bodies; the clock is fixed at 18:40 UTC.
+        (
+            "Daily API request limit exceeded. Please try again tomorrow.",
+            "daily",
+            "2026-10-19T00:00:00+00:00",
+            5 * 3600 + 20 * 60,
+        ),
+        (
+            "Hourly API request limit exceeded. Please try again in the next hour.",
+            "hourly",
+            "2026-10-18T19:00:00+00:00",
+            20 * 60,
+        ),
+    ],
+)
+def test_used_up_quota_says_when_it_resets(reason, limit, resets_at, retry_after, monkeypatch):
+    class Clock(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return datetime(2026, 10, 18, 18, 40, tzinfo=UTC)
+
+    monkeypatch.setattr(open_meteo, "datetime", Clock)
+    responses.get(URL, status=429, json={"error": True, "reason": reason})
+
+    with pytest.raises(ProviderBusyError) as info:
+        hourly([DALLAS], SAMPLE_START, 3)
+
+    assert f"{limit} limit is used up" in info.value.message
+    assert info.value.extra == {
+        "provider": "open-meteo",
+        "status": 429,
+        "limit": limit,
+        "retry_after": retry_after,
+        "resets_at": resets_at,
+    }
+
+
+@responses.activate
+def test_per_minute_limit_keeps_the_generic_busy_error():
+    body = {"error": True, "reason": "Minutely API request limit exceeded."}
+    responses.get(URL, status=429, json=body)
+
+    with pytest.raises(ProviderBusyError) as info:
+        hourly([DALLAS], SAMPLE_START, 3)
+
+    assert "limit" not in info.value.extra
+    assert info.value.extra["retry_after"] == 60

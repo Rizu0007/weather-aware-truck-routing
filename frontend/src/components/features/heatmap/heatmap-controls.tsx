@@ -132,9 +132,16 @@ export function HeatmapControls({
       {!loading && error && (
         <div role="alert" className="flex flex-wrap items-center gap-3 text-sm text-destructive">
           {error instanceof ApiError ? error.message : "The forecast grid couldn't be loaded."}
-          <Button size="sm" variant="outline" onClick={onRetry}>
-            Retry
-          </Button>
+          {error instanceof ApiError && error.resetsAt ? (
+            // A used-up quota: say when it's back instead of offering a pointless retry.
+            <span className="text-muted-foreground">
+              That's {formatDateTime(error.resetsAt)} for you.
+            </span>
+          ) : (
+            <Button size="sm" variant="outline" onClick={onRetry}>
+              Retry
+            </Button>
+          )}
         </div>
       )}
 

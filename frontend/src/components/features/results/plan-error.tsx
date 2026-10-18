@@ -47,6 +47,13 @@ export function PlanError({ error, errorAt, onRetry, onUseDeparture }: PlanError
       );
     }
     case "busy":
+      if (error.resetsAt) {
+        return (
+          <Alert variant="warning" title="The free weather service's limit is used up">
+            {error.message} That's {formatDateTime(error.resetsAt)} for you.
+          </Alert>
+        );
+      }
       return (
         <Alert
           variant="warning"

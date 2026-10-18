@@ -43,7 +43,7 @@ export function weatherField(heatmap: Heatmap, grid: FieldGrid, hour: number): W
     const cell = heatmap.cells[index];
     const mph = cell.wind_mph[hour] ?? 0;
     // Meteorological: degrees it blows from, clockwise from north. Unknown: from the west.
-    const toward = (((cell.wind_from_deg[hour] ?? 270) + 180) * Math.PI) / 180;
+    const toward = (((cell.wind_from_deg?.[hour] ?? 270) + 180) * Math.PI) / 180;
     field.windX[spot] = Math.sin(toward) * mph;
     field.windY[spot] = -Math.cos(toward) * mph;
     field.rain[spot] = cell.rain_in_hr[hour] ?? 0;
