@@ -198,7 +198,7 @@ Each checkpoint ends with: run it, confirm it works, commit, report to you.
 | **C9** **[frontend]** | `components/ui/` (§7.5 list) | RTL tests: variants, disabled/loading, labels wired to errors, combobox keyboard (APG) | R12 |
 | **C10** **[frontend]** | Layout + router: `AppLayout`, route map (§7.6), lazy routes, error boundary, 404 | Tests: unknown path → 404 page, thrown error → error page, nav links | R12 |
 | **C11** **[frontend]** | API client + hooks (§7.8, §7.9), fixtures captured from backend tests | Vitest: client error mapping for every status, hooks with mocked `fetch` | R1–R3 |
-| **C12** **[frontend]** | Screens one at a time: (a) trip form + URL state, (b) results: recommendation + route cards + checkpoint table, (c) map: routes, checkpoints, popups, selection sync, (d) heatmap layer + slider + play + legend, (e) About page | RTL per screen for every state in §7.4; manual on 3 trips; Performance trace while scrubbing (no long frames, no network) | R1–R12 |
+| **C12** **[frontend]** | Screens one at a time: (a) trip form + URL state, (b) results: recommendation + route cards + checkpoint table, (c) map: routes, checkpoints, popups, selection sync, (d) heatmap layer + slider + play + legend, (e) "How risk is scored" info panel | RTL per screen for every state in §7.4; manual on 3 trips; Performance trace while scrubbing (no long frames, no network) | R1–R12 |
 | **C13** | Error / empty / loading / waking states end-to-end | Manual: backend stopped, invalid place, too-far departure, one-route corridor, cold start, 503 busy | R12, R16 |
 | **C14** **[changed]** | Deploy: Render web service (root `backend/`, `uv sync --locked`, gunicorn), Vercel project (root `frontend/`, `vercel.json` rewrite to the Render URL), `NUM_PROXIES=2` | Open the Vercel URL after Render has slept; plan a trip; Lighthouse run | R13, R14 |
 | **C15** | Docs: README (setup, architecture, decisions, limitations), Loom talking points | Fresh clone following README only | R15, R16 |
@@ -237,12 +237,12 @@ Sources are linked inline. **UNVERIFIED** marks things not confirmed in docs or 
 
 ### 7.1 Screens, data and actions
 
-The app is one working screen plus two small pages. There is no auth, so there are no protected routes.
+The app is one working screen plus a 404 page. There is no auth, so there are no protected routes.
 
 | Screen | Shows (API data) | Main actions |
 |---|---|---|
 | **Planner** `/` | Form; recommendation + reason; warnings; route cards A–C (distance, time, arrival, miles by level, worst level); map with risk-coloured segments + checkpoint markers; checkpoint popup/table (ETA, wind/rain/snow, levels, reasons); heatmap overlay with 0–48 h slider and legend | Search and pick origin/destination; set departure, load, interval; plan; select a route (card or map); inspect a checkpoint; scrub or play the heatmap; retry; share the URL |
-| **About** `/about` (pending Q3: may become an info panel) | Risk table, load rules, ranking order, agreed interpretations, data sources | Read; link back to planner |
+| ~~About~~ (dropped 2026-10-18) | The risk table, load rules and ranking order live in a "How risk is scored" info panel on the planner | Open/close the panel |
 | **Not found** `*` | Message | Link to planner |
 | **Route error** (boundary) | Friendly message | Reload / go to planner |
 
@@ -412,7 +412,7 @@ Feature components only render props and call hooks; UI components never call th
   which declarative mode lacks, without framework mode's file conventions
   ([modes](https://reactrouter.com/start/modes)). In v8, `RouterProvider` is imported from
   `react-router/dom` and `react-router-dom` is gone ([v8 upgrade](https://reactrouter.com/upgrading/v7)).
-- **Lazy loading:** route-level `lazy` for `/about` and `*` ([route object](https://reactrouter.com/start/data/route-object)).
+- **Lazy loading:** route-level `lazy` for `*` ([route object](https://reactrouter.com/start/data/route-object)).
   It loads before render, so there's no Suspense flash, and it is the data-router equivalent of
   `React.lazy`. **`React.lazy` + `Suspense`** is used for the heavy `MapView` (MapLibre) inside the
   planner, so the form paints before the map chunk arrives. The planner itself is eager (it's the LCP route).
@@ -425,7 +425,6 @@ Feature components only render props and call hooks; UI components never call th
 | Path | Page | Layout | Loaded |
 |---|---|---|---|
 | `/` (index) | `PlannerPage` | `AppLayout` | eager; `MapView` via `React.lazy` |
-| `/about` | `AboutPage` | `AppLayout` | `lazy` |
 | `*` | `NotFoundPage` | `AppLayout` | `lazy` |
 | (error) | `RouteErrorPage` | root + layout child | eager |
 
@@ -453,13 +452,13 @@ frontend/
     ├── vite-env.d.ts                 typed import.meta.env
     ├── styles/                       index.css (Tailwind + @theme), tokens.css
     ├── routes/router.tsx             route objects (§7.6)
-    ├── pages/                        PlannerPage, AboutPage, NotFoundPage, RouteErrorPage
+    ├── pages/                        PlannerPage, NotFoundPage, RouteErrorPage
     ├── components/
     │   ├── ui/                       §7.5 list
     │   ├── layout/                   AppLayout, AppHeader, AppFooter, BackendStatusBanner
     │   └── features/
     │       ├── trip-form/            TripForm, PlaceCombobox, TripSummary
-    │       ├── results/              Recommendation, RouteCardList, RouteCard, RiskStrip, CheckpointTable, PlanWarnings, PlanError
+    │       ├── results/              Recommendation, RouteCardList, RouteCard, RiskStrip, CheckpointTable, PlanWarnings, PlanError, RiskInfoPanel
     │       ├── map/                  MapView, route-layers.ts, checkpoint-layer.ts, CheckpointPopup
     │       └── heatmap/              HeatmapControls, HeatmapLegend, heatmap-layer.ts
     ├── hooks/                        §7.9
@@ -512,7 +511,7 @@ lives in `MapView` refs, not a hook (one user). The ESLint `react-hooks` plugin 
 - **State placement:** selected route, hover and popup state live in `PlannerPage` / `MapView`, not
   above the router. `memo` is added only where a Profiler trace shows a cost (candidate: `RouteCard` list).
 - **Keys:** `route.id`, `checkpoint.mile`, `cell lon,lat`; never array indexes.
-- **Splitting:** the map chunk (~MapLibre, the largest dependency) and `/about` are lazy. The map
+- **Splitting:** the map chunk (MapLibre, the largest dependency) and the 404 page are lazy. The map
   chunk is prefetched after the health check succeeds, so it's ready by the time a plan returns.
 - **Assets:** no images besides SVG icons (lucide, tree-shaken); one self-hosted variable font
   (DM Sans, latin subset, preloaded, `font-display: swap`).
@@ -547,14 +546,13 @@ brand-new releases have time to show (e.g. React 19.3.1 is 4 days old → 19.3.0
 **Not adding (overkill here):** axios, Zustand/Redux, react-hook-form + zod (5 fields), MSW
 (a `fetch` spy covers our tests), Storybook, framer-motion, i18n, PWA, dark mode, Playwright, TanStack Router.
 
-### 7.12 Open questions
+### 7.12 Decisions (approved 2026-10-18)
 
-1. **Discard the Next.js draft?** It's in the scratchpad (not committed). The plan you approved earlier said Next.js; this replaces it.
-2. ~~Palette~~: **decided: D (Spotter-style dark)**, 2026-10-18.
-3. **About page:** I recommend dropping it ("correctness over extra features") and putting the risk
-   rules in an info panel on the planner. OK?
-4. **Version policy** (newest release ≥ 14 days old) OK?
-5. **Lazy loading:** route `lazy` for pages + `React.lazy` for the map, instead of `React.lazy` for every page (reason in §7.6). OK?
+1. Next.js draft discarded; frontend is React + Vite.
+2. Palette **D** (Spotter-style dark).
+3. No About page; the risk rules go in a "How risk is scored" panel on the planner.
+4. Version policy: newest release at least 14 days old.
+5. Lazy loading: route `lazy` for pages, `React.lazy` for the map.
 
 ## Requirement IDs
 
