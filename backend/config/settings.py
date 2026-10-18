@@ -14,6 +14,10 @@ env = environ.Env(
     DJANGO_DEBUG=(bool, False),
     DJANGO_ALLOWED_HOSTS=(list, ["localhost", "127.0.0.1"]),
     LOG_LEVEL=(str, "INFO"),
+    OSRM_URL=(str, "https://router.project-osrm.org"),
+    OPEN_METEO_URL=(str, "https://api.open-meteo.com/v1/forecast"),
+    OPEN_METEO_API_KEY=(str, ""),
+    PHOTON_URL=(str, "https://photon.komoot.io"),
 )
 if (BASE_DIR / ".env").exists():
     environ.Env.read_env(BASE_DIR / ".env")
@@ -55,6 +59,12 @@ REST_FRAMEWORK = {
     "UNAUTHENTICATED_USER": None,
     "EXCEPTION_HANDLER": "trips.api.exception_handler.exception_handler",
 }
+
+# Third-party providers (all keyless by default).
+OSRM_URL = env("OSRM_URL")
+OPEN_METEO_URL = env("OPEN_METEO_URL")
+OPEN_METEO_API_KEY = env("OPEN_METEO_API_KEY")
+PHOTON_URL = env("PHOTON_URL")
 
 LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"

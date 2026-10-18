@@ -22,6 +22,9 @@ uv run ruff format      # format
 uv run pytest           # tests
 ```
 
+Tests mock every external API with [`responses`](https://github.com/getsentry/responses), built
+from the saved samples in `backend/tests/fixtures/`, so they run offline.
+
 ### Git hooks
 
 ```bash
@@ -38,7 +41,7 @@ CI (`.github/workflows/ci.yml`) runs the same lint, format and test steps on eve
 | Weather | Open-Meteo forecast API |
 | Geocoding | Photon (komoot) |
 
-Optional URL overrides are listed in [.env.example](.env.example).
+Optional URL overrides are listed in [backend/.env.example](backend/.env.example).
 
 ## API probes
 
