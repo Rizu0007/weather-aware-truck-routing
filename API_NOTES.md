@@ -174,10 +174,21 @@ existing route > **0.8** (≈1 km cell footprint) or duration > **1.5×** fastes
 Also seen once: a TLS handshake timeout after 20 s on a normal request; the immediate retry succeeded.
 → Retries are needed for transient network errors.
 
+**Seen again in C7 (2026-10-18), more often:** about 1 in 6 new connections stalled in the TLS handshake
+(reported by requests as `ReadTimeout` with the *connect* timeout); the next connection was fine.
+Fix: one shared `requests.Session` so keep-alive connections are reused (repeat calls 0.2 s instead of
+1.2–1.5 s), and a 3 s connect timeout so a stalled handshake is retried quickly.
+
 ### Rate limits
-No rate-limit headers. 429 not triggered. Not tested against the documented free-tier limits
-(600 calls/min, 5,000/hour, 10,000/day), so we don't know how multi-location requests are counted;
-we assume **one call per location**, the conservative reading.
+No rate-limit headers. Documented free-tier limits: 600 calls/min, 5,000/hour, 10,000/day.
+
+**Measured in C7 (2026-10-18): each location counts as one call.** Five requests of 150 locations ×
+49 h within a minute: the first four (600 locations) returned 200, the fifth returned
+**HTTP 429** `{"reason": "Minutely API request limit exceeded. Please try again in one minute.", "error": true}`.
+Just before the limit, requests also slowed down (read timeouts, 7 s responses instead of ~1.5 s).
+
+Consequences (approved): 429 is not retried and becomes a 503 "busy" error with `retry_after`;
+the heatmap is capped at 120 cells so ~3 plan + heatmap pairs fit in a minute.
 
 ### Batching and resolution (tuning result)
 
@@ -285,6 +296,7 @@ autocomplete and cache results.
 | Open-Meteo object vs array | Normalise to a list in the client |
 | 414 above ~8–10 K URL chars | Batch ≤ 200 locations per request |
 | ~1,000 locations for long trips | Scale heatmap cell size with trip length; de-duplicate; cache |
+| 429 after 600 locations/min (all users) | No retry on 429; 503 with `retry_after`; heatmap ≤ 120 cells |
 | Transient TLS timeout seen | Retry with backoff on network errors / 5xx / 429 |
 | Forecast ends ~15 days out | Validate departure + trip + 48 h heatmap against the horizon |
 | Photon results are global | Pass a North America `bbox` for autocomplete |

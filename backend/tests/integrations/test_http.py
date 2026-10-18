@@ -2,7 +2,7 @@ import pytest
 import requests
 import responses
 
-from trips.exceptions import ProviderError
+from trips.exceptions import ProviderBusyError, ProviderError
 from trips.integrations.http import MAX_ATTEMPTS, get_json
 
 URL = "https://api.example.test/v1"
@@ -17,7 +17,7 @@ def test_returns_decoded_json_and_sends_params():
 
 
 @responses.activate
-@pytest.mark.parametrize("failure", [503, 429, requests.ConnectTimeout("timed out")])
+@pytest.mark.parametrize("failure", [503, requests.ConnectTimeout("timed out")])
 def test_retries_transient_failures(failure):
     if isinstance(failure, int):
         responses.get(URL, status=failure)
@@ -84,3 +84,18 @@ def test_api_keys_are_redacted_from_logs(caplog):
 
     assert "s3cret" not in caplog.text
     assert "apikey=***" in caplog.text
+
+
+@responses.activate
+@pytest.mark.parametrize(("headers", "retry_after"), [({"Retry-After": "30"}, 30), ({}, 60)])
+def test_rate_limit_is_a_busy_error_without_retry(headers, retry_after):
+    # Open-Meteo's real 429 body: the limit is per minute.
+    body = {"reason": "Minutely API request limit exceeded.", "error": True}
+    responses.get(URL, status=429, json=body, headers=headers)
+
+    with pytest.raises(ProviderBusyError) as info:
+        get_json("example", URL, {})
+
+    assert len(responses.calls) == 1
+    assert info.value.status_code == 503
+    assert info.value.extra == {"provider": "example", "status": 429, "retry_after": retry_after}

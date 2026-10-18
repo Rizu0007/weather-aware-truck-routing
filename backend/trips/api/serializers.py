@@ -5,6 +5,7 @@ from rest_framework import serializers
 
 from trips.domain.geo import haversine_mi
 from trips.domain.risk import RiskLevel
+from trips.services.heatmap import Heatmap
 from trips.services.trip_planning import CheckpointRisk, PlannedRoute, TripPlan
 
 
@@ -21,6 +22,14 @@ class PlaceOutputSerializer(serializers.Serializer):
 MIN_TRIP_MILES = 1
 MAX_LOAD_LB = 80_000  # US federal gross weight limit
 DEPARTURE_GRACE = timedelta(hours=1)
+MAX_HEATMAP_ROUTES = 3
+MAX_HEATMAP_POINTS = 10_000  # bounds the grid's CPU time
+
+
+def _check_departure(value: datetime) -> datetime:
+    if value < timezone.now() - DEPARTURE_GRACE:
+        raise serializers.ValidationError("Departure can't be in the past.")
+    return value
 
 
 class PointSerializer(serializers.Serializer):
@@ -36,9 +45,7 @@ class TripPlanInputSerializer(serializers.Serializer):
     interval_mi = serializers.ChoiceField(choices=[10, 25, 50], default=10)
 
     def validate_departure(self, value: datetime) -> datetime:
-        if value < timezone.now() - DEPARTURE_GRACE:
-            raise serializers.ValidationError("Departure can't be in the past.")
-        return value
+        return _check_departure(value)
 
     def validate(self, attrs: dict) -> dict:
         origin, destination = attrs["origin"], attrs["destination"]
@@ -50,6 +57,32 @@ class TripPlanInputSerializer(serializers.Serializer):
                 {"destination": "Destination must be at least 1 mile from the origin."}
             )
         return attrs
+
+
+class HeatmapInputSerializer(serializers.Serializer):
+    # Route geometries from a trip plan, as [[lon, lat], ...] each.
+    routes = serializers.ListField(
+        child=serializers.ListField(
+            child=serializers.ListField(child=serializers.FloatField(), min_length=2, max_length=2),
+            min_length=2,
+        ),
+        min_length=1,
+        max_length=MAX_HEATMAP_ROUTES,
+    )
+    departure = serializers.DateTimeField()
+    load_lb = serializers.IntegerField(min_value=1, max_value=MAX_LOAD_LB)
+
+    def validate_departure(self, value: datetime) -> datetime:
+        return _check_departure(value)
+
+    def validate_routes(self, routes: list) -> list:
+        if sum(len(route) for route in routes) > MAX_HEATMAP_POINTS:
+            raise serializers.ValidationError(f"At most {MAX_HEATMAP_POINTS} points in total.")
+        for route in routes:
+            for lon, lat in route:
+                if not (-180 <= lon <= 180 and -90 <= lat <= 90):
+                    raise serializers.ValidationError(f"Invalid coordinate [{lon}, {lat}].")
+        return [[(lon, lat) for lon, lat in route] for route in routes]
 
 
 def _level_key(level: RiskLevel) -> str:
@@ -117,4 +150,29 @@ class TripPlanOutputSerializer(serializers.BaseSerializer):
             "recommendation": {"reason": plan.ranking.reason, "ranking": plan.ranking.order},
             "warnings": plan.warnings,
             "routes": RouteOutputSerializer(plan.routes, many=True).data,
+        }
+
+
+def _rounded(values: list[float | None], decimals: int) -> list[float | None]:
+    return [None if v is None else round(v, decimals) for v in values]
+
+
+class HeatmapOutputSerializer(serializers.BaseSerializer):
+    def to_representation(self, heatmap: Heatmap) -> dict:
+        return {
+            "start": _iso(heatmap.start),
+            "hours": heatmap.hours,
+            "cell_deg": heatmap.cell_deg,
+            "warnings": heatmap.warnings,
+            "cells": [
+                {
+                    "lon": cell.center[0],
+                    "lat": cell.center[1],
+                    "risk": cell.risk,
+                    "wind_mph": _rounded(cell.wind_mph, 1),
+                    "rain_in_hr": _rounded(cell.rain_in_hr, 2),
+                    "snow_in_hr": _rounded(cell.snow_in_hr, 1),
+                }
+                for cell in heatmap.cells
+            ],
         }

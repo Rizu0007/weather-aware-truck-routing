@@ -25,6 +25,13 @@ uv run pytest           # tests
 Tests mock every external API with [`responses`](https://github.com/getsentry/responses), built
 from the saved samples in `backend/tests/fixtures/`, so they run offline.
 
+### Docker
+
+```bash
+docker compose --profile test run --rm backend-tests   # lint + tests
+docker compose up -d backend                           # API on http://localhost:8000
+```
+
 ### Git hooks
 
 ```bash
@@ -40,6 +47,7 @@ CI (`.github/workflows/ci.yml`) runs the same lint, format and test steps on eve
 | `GET /api/health` | `{"status": "ok"}` |
 | `GET /api/places?q=Hous` | Up to 5 North American places: `[{label, lat, lon}]` |
 | `POST /api/trip-plans` | Up to 3 routes with checkpoints, weather at each ETA, risk summaries and the recommended route |
+| `POST /api/heatmaps` | Risk per grid cell along the routes, hourly for 0–48 h after departure (≤ 120 cells) |
 
 ```bash
 curl -X POST localhost:8000/api/trip-plans -H 'Content-Type: application/json' -d '{
@@ -52,7 +60,8 @@ average risk (Low = 0 … No Travel = 4), then travel time. Mile differences und
 differences under 0.01 count as ties.
 
 Errors are always `{"message": str, "extra": {...}}`: 400 invalid input (field errors in
-`extra.fields`), 422 no route / beyond the forecast, 502 an external service failed.
+`extra.fields`), 422 no route / beyond the forecast, 429 too many requests, 502 an external service
+failed, 503 an external service is rate-limited (`extra.retry_after` seconds).
 
 ## External APIs (all keyless)
 

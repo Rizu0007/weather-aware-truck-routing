@@ -4,21 +4,15 @@ import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from django.utils import timezone
-
 from trips.domain.checkpoints import Checkpoint, TruckTimeline, build_checkpoints
 from trips.domain.geo import Coord, simplify, slice_line
 from trips.domain.ranking import Candidate, Ranking, RiskSummary, rank, summarize
 from trips.domain.risk import Assessment, RiskLevel, assess
-from trips.exceptions import ForecastHorizonError
 from trips.integrations import open_meteo
+from trips.services.forecast_window import check_forecast_horizon
 from trips.services.route_options import RouteOption, find_route_options
 
 TRUCK_MAX_SPEED_MPH = 65
-# Open-Meteo serves ~15 days ahead (API_NOTES.md, section 2); keep a margin.
-FORECAST_HORIZON = timedelta(days=15) - timedelta(hours=6)
-# The heatmap shows 48 h from departure, so the plan must leave room for it.
-HEATMAP_HOURS = 48
 # ~50 m: invisible at route zoom, shrinks the geometry several-fold.
 SIMPLIFY_TOLERANCE_DEG = 0.0005
 
@@ -73,7 +67,7 @@ def plan_trip(
         for o in found.options
     ]
     longest = timedelta(seconds=max(t.total_seconds for t in timelines))
-    _check_forecast_horizon(departure, longest)
+    check_forecast_horizon(departure, longest)
 
     checkpoints = [build_checkpoints(t, departure, interval_mi) for t in timelines]
     weather = _weather_by_checkpoint(checkpoints, departure, longest)
@@ -108,17 +102,6 @@ def plan_trip(
         ranking=ranking,
         warnings=warnings,
     )
-
-
-def _check_forecast_horizon(departure: datetime, longest_trip: timedelta) -> None:
-    latest_end = timezone.now() + FORECAST_HORIZON
-    needed = max(longest_trip, timedelta(hours=HEATMAP_HOURS))
-    if departure + needed > latest_end:
-        latest_departure = (latest_end - needed).replace(minute=0, second=0, microsecond=0)
-        raise ForecastHorizonError(
-            "Forecasts only reach about 15 days ahead. Choose an earlier departure.",
-            extra={"latest_departure": latest_departure.isoformat()},
-        )
 
 
 def _weather_by_checkpoint(

@@ -3,12 +3,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from trips.api.serializers import (
+    HeatmapInputSerializer,
+    HeatmapOutputSerializer,
     PlaceOutputSerializer,
     PlaceSearchInputSerializer,
     TripPlanInputSerializer,
     TripPlanOutputSerializer,
 )
 from trips.integrations import photon
+from trips.services.heatmap import build_heatmap
 from trips.services.trip_planning import plan_trip
 
 
@@ -44,3 +47,13 @@ class TripPlanCreateApi(APIView):
             interval_mi=data["interval_mi"],
         )
         return Response(TripPlanOutputSerializer(plan).data)
+
+
+class HeatmapCreateApi(APIView):
+    throttle_scope = "heatmaps"
+
+    def post(self, request: Request) -> Response:
+        params = HeatmapInputSerializer(data=request.data)
+        params.is_valid(raise_exception=True)
+        heatmap = build_heatmap(**params.validated_data)
+        return Response(HeatmapOutputSerializer(heatmap).data)

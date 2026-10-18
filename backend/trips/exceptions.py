@@ -32,3 +32,10 @@ class ProviderError(ApplicationError):
     def __init__(self, provider: str, message: str | None = None, extra: dict | None = None):
         super().__init__(message, {"provider": provider, **(extra or {})})
         self.provider = provider
+
+
+class ProviderBusyError(ProviderError):
+    """The provider's rate limit is used up; retrying straight away won't help."""
+
+    status_code = 503
+    default_message = "The weather or routing service is busy. Please try again in a minute."

@@ -57,7 +57,7 @@ REST_FRAMEWORK = {
     "EXCEPTION_HANDLER": "trips.api.exception_handler.exception_handler",
     # Per client IP; protects the free provider quotas (Open-Meteo: 600 calls/min).
     "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.ScopedRateThrottle"],
-    "DEFAULT_THROTTLE_RATES": {"trip-plans": "20/min", "places": "120/min"},
+    "DEFAULT_THROTTLE_RATES": {"trip-plans": "20/min", "heatmaps": "20/min", "places": "120/min"},
     "NUM_PROXIES": env("NUM_PROXIES"),
 }
 
