@@ -18,8 +18,9 @@ USER app
 EXPOSE 8000
 HEALTHCHECK --interval=10s --timeout=3s --retries=5 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"
-# Threads, because requests mostly wait on providers; timeout covers slow provider retries.
-CMD ["gunicorn", "config.wsgi", "--bind", "0.0.0.0:8000", "--workers", "2", "--threads", "4", "--timeout", "120"]
+# One worker so the in-memory cache (routes, weather, rate limits) is shared by every
+# request; threads, because requests mostly wait on providers. Timeout covers slow retries.
+CMD ["gunicorn", "config.wsgi", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "8", "--timeout", "120"]
 
 FROM base AS test
 RUN uv sync --locked

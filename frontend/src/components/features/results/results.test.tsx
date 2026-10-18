@@ -37,6 +37,13 @@ describe("CheckpointTable", () => {
     expect(within(rows[0]).getByText("Low")).toBeInTheDocument();
   });
 
+  it("puts Risk right after ETA, so it's visible on a phone without scrolling", () => {
+    render(<CheckpointTable route={ROUTE_A} />);
+
+    const headers = screen.getAllByRole("columnheader").map((th) => th.textContent);
+    expect(headers.slice(0, 3)).toEqual(["Mile", expect.stringMatching(/^ETA/), "Risk"]);
+  });
+
   it("shows a dash for missing forecast values", () => {
     const route: PlannedRoute = {
       ...ROUTE_A,

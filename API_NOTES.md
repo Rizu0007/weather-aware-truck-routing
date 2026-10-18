@@ -88,6 +88,18 @@ whose usage policy asks for at most 1 request/second. Tuning scripts sleep 1 s b
    Likely turn/penalty time that OSRM adds to the total only. Found during C3 (2026-10-18).
    Decision (approved): scale segment times proportionally so the arrival ETA equals `route.duration`.
 
+### Slow public servers (seen in browser testing, 2026-10-18)
+During one evening of testing, all three providers stalled at times in the same plan: OSRM via-route
+requests took over 10 s, Photon dropped connections or stalled in the TLS handshake, and Open-Meteo
+timed out on large batches. One uncached Chicago–Denver plan took over 60 s, longer than the
+frontend's timeout. Changes:
+- the 4 town lookups run in parallel and get at most 8 s (40 % of the budget);
+- finding alternatives has a 20 s budget, then the plan returns the routes found so far, with the
+  "temporarily unavailable" warning (not cached, so the next request tries again);
+- the frontend waits 90 s (Vercel's proxy allows 120 s) and says "still working" after 10 s;
+- gunicorn runs 1 worker × 8 threads, so the in-memory cache is shared by every request (with 2
+  workers, a repeated plan was recomputed whenever it hit the other worker).
+
 ### Generating the missing alternatives (tuning result)
 
 Force a route through a via-point offset perpendicular to the origin–destination line at its midpoint.

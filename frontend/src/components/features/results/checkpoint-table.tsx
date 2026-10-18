@@ -29,6 +29,9 @@ export function CheckpointTable({ route }: { route: PlannedRoute }) {
             <th scope="col" className="px-3 py-2 font-medium">
               ETA ({timeZoneAbbreviation(new Date(route.checkpoints[0].eta))})
             </th>
+            <th scope="col" className="px-3 py-2 font-medium">
+              Risk
+            </th>
             <th scope="col" className="px-3 py-2 text-right font-medium">
               Wind mph
             </th>
@@ -37,9 +40,6 @@ export function CheckpointTable({ route }: { route: PlannedRoute }) {
             </th>
             <th scope="col" className="px-3 py-2 text-right font-medium">
               Snow in/hr
-            </th>
-            <th scope="col" className="px-3 py-2 font-medium">
-              Risk
             </th>
             <th scope="col" className="px-3 py-2 font-medium">
               Why
@@ -55,12 +55,12 @@ export function CheckpointTable({ route }: { route: PlannedRoute }) {
               <td className="px-3 py-2 whitespace-nowrap">
                 {formatClock(checkpoint.eta, route.checkpoints[index - 1]?.eta)}
               </td>
-              <td className="px-3 py-2 text-right">{reading(checkpoint.wind_mph, 0)}</td>
-              <td className="px-3 py-2 text-right">{reading(checkpoint.rain_in_hr, 2)}</td>
-              <td className="px-3 py-2 text-right">{reading(checkpoint.snow_in_hr, 1)}</td>
               <td className="px-3 py-2">
                 <Badge variant={checkpoint.level}>{RISK_LABELS[checkpoint.level]}</Badge>
               </td>
+              <td className="px-3 py-2 text-right">{reading(checkpoint.wind_mph, 0)}</td>
+              <td className="px-3 py-2 text-right">{reading(checkpoint.rain_in_hr, 2)}</td>
+              <td className="px-3 py-2 text-right">{reading(checkpoint.snow_in_hr, 1)}</td>
               <td className="px-3 py-2 text-muted-foreground">
                 {checkpoint.reasons.join("; ") || "—"}
               </td>

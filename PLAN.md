@@ -156,6 +156,8 @@ errors under `extra.fields`).
   code; OSRM's documented `code` field is the one exception (C5).
 - Weather is all-or-nothing for a plan. A heatmap failure never fails the plan.
 - Fewer than 3 routes is a warning, not an error.
+- Finding alternatives has a 20 s budget (town lookups in parallel, at most 8 s); past it the plan
+  returns the routes found so far (browser testing, API_NOTES "Slow public servers").
 
 ### Loading states **[changed: + health]**
 - **Waking state:** `use-backend-health` calls `/api/health` on page load. While it hasn't answered,

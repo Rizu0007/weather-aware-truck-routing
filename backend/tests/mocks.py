@@ -10,6 +10,8 @@ import responses
 from django.conf import settings
 
 from tests.conftest import load_sample
+from trips.domain.alternatives import VIA_OFFSETS, via_point
+from trips.integrations.photon import TOWN_SNAP_DEG
 
 OSRM_URL = re.compile(re.escape(settings.OSRM_URL) + r"/route/v1/driving/.*")
 REVERSE_URL = f"{settings.PHOTON_URL}/reverse"
@@ -62,11 +64,34 @@ def no_town():
     return load_sample("photon_reverse_no_town")
 
 
-def mock_towns(answers):
-    queue = list(answers)
-    responses.add_callback(
-        responses.GET, REVERSE_URL, callback=lambda _: (200, {}, json.dumps(queue.pop(0)))
-    )
+def mock_towns(answers, origin=DALLAS, destination=HOUSTON):
+    """Answer each via-point's /reverse lookup: answers[i] is for VIA_OFFSETS[i].
+
+    An answer is a body, a (status, body) pair, or a callable returning either.
+
+    Matched by coordinates, not call order, because the lookups run in parallel.
+    """
+    by_point = {}
+    for offset, answer in zip(VIA_OFFSETS, answers, strict=False):
+        lon, lat = via_point(origin, destination, offset)
+        by_point[(_snap(lon), _snap(lat))] = answer
+
+    def callback(request):
+        query = parse_qs(urlparse(request.url).query)
+        point = (round(float(query["lon"][0]), 2), round(float(query["lat"][0]), 2))
+        answer = by_point.get(point, no_town())
+        if callable(answer):  # e.g. a slow answer
+            answer = answer(request)
+        if isinstance(answer, tuple):  # (status, body)
+            return answer[0], {}, json.dumps(answer[1])
+        return 200, {}, json.dumps(answer)
+
+    responses.add_callback(responses.GET, REVERSE_URL, callback=callback)
+
+
+def _snap(value: float) -> float:
+    # Same rounding as photon.nearest_town.
+    return round(round(value / TOWN_SNAP_DEG) * TOWN_SNAP_DEG, 2)
 
 
 def calm(lon, lat, hour):

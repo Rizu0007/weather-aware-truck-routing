@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
 
 import { checkHealth } from "@/api/endpoints";
 import { queryKeys } from "@/api/query-keys";
+import { useDelayedFlag } from "@/hooks/use-delayed-flag";
 
 export type BackendStatus = "checking" | "waking" | "ready";
 
@@ -20,12 +20,7 @@ export function useBackendHealth(): BackendStatus {
     staleTime: Infinity,
     gcTime: Infinity,
   });
-  const [slow, setSlow] = useState(false);
-
-  useEffect(() => {
-    const timer = setTimeout(() => setSlow(true), WAKING_AFTER_MS);
-    return () => clearTimeout(timer);
-  }, []);
+  const slow = useDelayedFlag(!health.isSuccess, WAKING_AFTER_MS);
 
   if (health.isSuccess) return "ready";
   return slow || health.failureCount > 0 ? "waking" : "checking";

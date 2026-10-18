@@ -1,5 +1,8 @@
 """Route options with OSRM and Photon mocked from the saved Dallas-Houston samples."""
 
+import json
+import time
+
 import pytest
 import responses
 
@@ -7,6 +10,7 @@ from tests.conftest import load_sample
 from tests.mocks import (
     DALLAS,
     HOUSTON,
+    OSRM_URL,
     REVERSE_URL,
     is_via_request,
     mock_osrm,
@@ -17,6 +21,7 @@ from tests.mocks import (
     via_route,
 )
 from trips.exceptions import NoRouteError
+from trips.services import route_options
 from trips.services.route_options import find_route_options
 
 
@@ -151,3 +156,78 @@ def test_via_route_outage_keeps_routes_found_before_it():
 
     assert [o.via_town for o in result.options] == [None, "Franklin, Texas"]
     assert result.warnings == ["Alternative routes are temporarily unavailable."]
+
+
+def slow(answer, seconds):
+    """A /reverse answer that arrives after `seconds`, like a stalled public server."""
+
+    def callback(_):
+        time.sleep(seconds)
+        return answer
+
+    return callback
+
+
+@responses.activate
+def test_town_lookups_run_in_parallel(monkeypatch):
+    mock_osrm((200, native()))
+    responses.add_callback(
+        responses.GET,
+        REVERSE_URL,
+        callback=lambda _: (time.sleep(0.3), (200, {}, '{"features": []}'))[1],
+    )
+
+    started = time.monotonic()
+    find_route_options(DALLAS, HOUSTON)
+
+    assert len([c for c in responses.calls if "/reverse" in c.request.url]) == 4
+    assert time.monotonic() - started < 0.9  # 4 x 0.3 s one after another would be 1.2 s
+
+
+@responses.activate
+def test_one_failed_lookup_doesnt_stop_the_others():
+    mock_osrm((200, native()), [(200, via_route()), (200, via_route(shift_lon=0.5))])
+    mock_towns(
+        [(503, {}), town("Franklin", -96.48, 31.03), town("Cameron", -96.98, 30.85), no_town()]
+    )
+
+    result = find_route_options(DALLAS, HOUSTON)
+
+    assert [o.via_town for o in result.options] == [None, "Franklin, Texas", "Cameron, Texas"]
+    assert result.warnings == []  # three routes despite the failure: nothing missing
+
+
+@responses.activate
+def test_stalled_lookup_is_given_up_after_the_budget(monkeypatch):
+    monkeypatch.setattr(route_options, "ALTERNATIVES_BUDGET_S", 0.5)
+    mock_osrm((200, native()), [(200, via_route())])
+    mock_towns([town("Franklin", -96.48, 31.03), slow(town("Cameron", -96.98, 30.85), 2)])
+
+    started = time.monotonic()
+    result = find_route_options(DALLAS, HOUSTON)
+
+    assert time.monotonic() - started < 1.5  # didn't wait for the stalled lookup
+    assert [o.via_town for o in result.options] == [None, "Franklin, Texas"]
+    assert result.warnings == ["Alternative routes are temporarily unavailable."]
+
+
+@responses.activate
+def test_slow_routing_stops_the_search_at_the_budget(monkeypatch):
+    monkeypatch.setattr(route_options, "ALTERNATIVES_BUDGET_S", 0.5)
+    calls = []
+
+    def osrm_answer(request):
+        if is_via_request(request.url):
+            calls.append(request.url)
+            time.sleep(0.6)  # the first via route alone uses up the budget
+            return 200, {}, json.dumps(via_route())
+        return 200, {}, json.dumps(native())
+
+    responses.add_callback(responses.GET, OSRM_URL, callback=osrm_answer)
+    mock_towns([town("Franklin", -96.48, 31.03), town("Cameron", -96.98, 30.85)])
+
+    result = find_route_options(DALLAS, HOUSTON)
+
+    assert len(calls) == 1
+    assert [o.via_town for o in result.options] == [None, "Franklin, Texas"]
+    assert "temporarily unavailable" in result.warnings[0]

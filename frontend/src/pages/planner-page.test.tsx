@@ -73,6 +73,22 @@ describe("PlannerPage: planning", () => {
     expect(screen.getByRole("region", { name: "Results" })).toHaveAttribute("aria-busy", "true");
   });
 
+  it("says it's still working when a plan takes over 10 s", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      renderPlanner(SHARED, { "/api/trip-plans": () => new Promise<Response>(() => {}) });
+      await screen.findByText("Finding routes and checking the forecast along each one…");
+
+      await vi.advanceTimersByTimeAsync(10_000);
+
+      expect(
+        screen.getByText(/Still working: the free routing and weather servers are slow/),
+      ).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("explains a broken link instead of guessing", async () => {
     renderPlanner("/?from=abc&load=9");
 

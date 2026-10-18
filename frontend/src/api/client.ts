@@ -1,8 +1,9 @@
 import type { ApiErrorBody } from "@/types/api";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "/api";
-// A plan takes ~5-10 s; ~40 s if Django is retrying a slow provider.
-const DEFAULT_TIMEOUT_MS = 60_000;
+// A plan takes ~5-10 s, longer when public providers stall; Django stops looking for
+// alternatives after 20 s. Vercel's proxy allows 120 s.
+const DEFAULT_TIMEOUT_MS = 90_000;
 const DEFAULT_RETRY_AFTER_S = 60;
 
 export type ApiErrorKind =
@@ -77,7 +78,10 @@ export async function request<T>(
   } catch (cause) {
     if (signal?.aborted) throw cause; // cancelled by the caller (e.g. a newer search)
     if (timeout.aborted) {
-      throw new ApiError("timeout", "The server took too long to answer. Please try again.");
+      throw new ApiError(
+        "timeout",
+        "The server took too long to answer. It may have finished meanwhile, so try again.",
+      );
     }
     throw new ApiError("network", "Can't reach the server. Check your connection and try again.");
   }

@@ -12,11 +12,14 @@ import { TripSummary } from "@/components/features/trip-form/trip-summary";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { useBackendHealth } from "@/hooks/use-backend-health";
+import { useDelayedFlag } from "@/hooks/use-delayed-flag";
 import { useTripParams } from "@/hooks/use-trip-params";
 import { useTripPlan } from "@/hooks/use-trip-plan";
 import { nextFullHour } from "@/utils/format";
 import type { TripParams } from "@/utils/trip-params";
 import { serverFieldErrors } from "@/utils/validate-trip";
+
+const SLOW_PLAN_MS = 10_000;
 
 function exampleTrip(): TripParams {
   return {
@@ -32,6 +35,7 @@ export function PlannerPage() {
   const backend = useBackendHealth();
   const { trip, invalidLink, routeId, setTrip, setRouteId } = useTripParams();
   const plan = useTripPlan(trip);
+  const slowPlan = useDelayedFlag(plan.isFetching, SLOW_PLAN_MS);
   const [editing, setEditing] = useState(trip === null);
   const resultsHeading = useRef<HTMLHeadingElement>(null);
   const focusResults = useRef(false);
@@ -93,7 +97,10 @@ export function PlannerPage() {
             role="status"
             className={plan.isFetching ? "text-sm text-muted-foreground" : "sr-only"}
           >
-            {plan.isFetching && "Finding routes and checking the forecast along each one…"}
+            {plan.isFetching &&
+              (slowPlan
+                ? "Still working: the free routing and weather servers are slow right now…"
+                : "Finding routes and checking the forecast along each one…")}
             {data &&
               `${data.routes.length} routes found. Recommended: route ${data.recommended_route_id}.`}
           </p>
