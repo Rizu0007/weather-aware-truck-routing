@@ -1,5 +1,5 @@
 import { Pause, Play } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { HeatmapLegend } from "@/components/features/heatmap/heatmap-legend";
@@ -45,6 +45,16 @@ export function HeatmapControls({
     onHourChange(next);
   }
   const playback = useHeatmapPlayback(hours, hour, show);
+  // Low cells are clear on the map, so say when an hour has nothing to show.
+  const riskyCells = useMemo(
+    () =>
+      Array.from(
+        { length: hours },
+        (_, h) => heatmap?.cells.filter((cell) => cell.risk[h] > 0).length ?? 0,
+      ),
+    [heatmap, hours],
+  );
+  const risky = riskyCells[hour] ?? 0;
 
   const time = heatmap
     ? formatDateTime(new Date(Date.parse(heatmap.start) + hour * 3_600_000).toISOString())
@@ -126,7 +136,13 @@ export function HeatmapControls({
           </div>
           <p className="text-sm tabular-nums" aria-hidden="true">
             <span className="font-semibold">+{hour} h</span>{" "}
-            <span className="text-muted-foreground">· {time}</span>
+            <span className="text-muted-foreground">· {time}</span>{" "}
+            <span className="text-muted-foreground">
+              ·{" "}
+              {risky === 0
+                ? "all Low along the corridor"
+                : `${risky} area${risky === 1 ? "" : "s"} Moderate or worse`}
+            </span>
           </p>
           <HeatmapLegend />
           {heatmap.warnings.map((warning) => (

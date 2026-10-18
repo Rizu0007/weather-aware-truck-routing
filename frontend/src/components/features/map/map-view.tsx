@@ -120,8 +120,9 @@ export default function MapView({
       style: BASEMAP_STYLE,
       bounds: boundsOf(routes),
       fitBoundsOptions: { padding: FIT_PADDING },
-      // Embedded in a scrolling page: one finger / plain wheel scrolls the page, not the map.
-      cooperativeGestures: true,
+      // On touch screens one finger scrolls the page, two move the map. A mouse wheel zooms:
+      // making desktop users hold ⌘ felt like the map was broken.
+      cooperativeGestures: matchMedia("(pointer: coarse)").matches,
       attributionControl: { compact: true },
     });
     map.current = instance;

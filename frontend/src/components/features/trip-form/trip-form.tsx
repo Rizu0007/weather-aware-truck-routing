@@ -22,6 +22,8 @@ interface TripFormProps {
   submitting?: boolean;
   /** e.g. while the backend is waking up. */
   submitDisabled?: boolean;
+  /** Back to the current plan without changes; shown when editing one. */
+  onCancel?: () => void;
 }
 
 function initialValues(trip: TripParams | null | undefined): TripFormValues {
@@ -49,6 +51,7 @@ export function TripForm({
   serverErrors = {},
   submitting = false,
   submitDisabled = false,
+  onCancel,
 }: TripFormProps) {
   const [values, setValues] = useState(() => initialValues(initialTrip));
   const [errors, setErrors] = useState<TripErrors>({});
@@ -165,9 +168,22 @@ export function TripForm({
         </FormField>
       </div>
 
-      <Button type="submit" size="lg" loading={submitting} disabled={submitDisabled}>
-        {submitting ? "Planning…" : "Plan trip"}
-      </Button>
+      <div className="flex gap-3">
+        {onCancel && (
+          <Button type="button" variant="outline" size="lg" onClick={onCancel}>
+            Cancel
+          </Button>
+        )}
+        <Button
+          type="submit"
+          size="lg"
+          loading={submitting}
+          disabled={submitDisabled}
+          className="flex-1"
+        >
+          {submitting ? "Planning…" : "Plan trip"}
+        </Button>
+      </div>
     </form>
   );
 }

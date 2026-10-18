@@ -30,6 +30,12 @@ function renderControls(props: Partial<Parameters<typeof HeatmapControls>[0]> = 
   return handlers;
 }
 
+/** The fixture grid with every hour of cell `i` at level `level(i)`. */
+function withRisk(level: (i: number) => number): Heatmap {
+  const cells = HEATMAP.cells.map((cell, i) => ({ ...cell, risk: cell.risk.map(() => level(i)) }));
+  return { ...HEATMAP, cells };
+}
+
 const slider = () => screen.getByRole("slider", { name: "Forecast hour after departure" });
 
 afterEach(() => vi.useRealTimers());
@@ -84,8 +90,20 @@ describe("HeatmapControls", () => {
     renderControls();
 
     expect(screen.getByRole("list", { name: "Risk colours" })).toHaveTextContent(
-      "LowModerateHighSevereNo Travel",
+      "Low (clear)ModerateHighSevereNo Travel",
     );
+  });
+
+  it("says when an hour is all Low, since Low cells are clear on the map", () => {
+    renderControls({ heatmap: withRisk(() => 0) });
+
+    expect(screen.getByText("· all Low along the corridor")).toBeInTheDocument();
+  });
+
+  it("counts the areas at Moderate or worse for the chosen hour", () => {
+    renderControls({ heatmap: withRisk((i) => (i < 2 ? 2 : 0)) });
+
+    expect(screen.getByText("· 2 areas Moderate or worse")).toBeInTheDocument();
   });
 
   it("loading and error states", async () => {

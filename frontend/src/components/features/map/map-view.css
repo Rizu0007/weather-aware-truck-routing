@@ -14,9 +14,19 @@
 }
 
 .maplibregl-popup-close-button {
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
   color: var(--muted-foreground);
-  font-size: 18px;
-  padding: 0 6px;
+  font-size: 20px;
+  line-height: 1;
+}
+
+.maplibregl-popup-close-button:hover {
+  background: var(--surface);
+  color: var(--foreground);
 }
 
 .maplibregl-ctrl-group {

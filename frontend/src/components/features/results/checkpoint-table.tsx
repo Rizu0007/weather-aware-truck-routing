@@ -32,19 +32,31 @@ export function CheckpointTable({
   onActivate,
   onHover,
 }: CheckpointTableProps) {
+  const scroller = useRef<HTMLDivElement>(null);
   const activeRow = useRef<HTMLTableRowElement>(null);
 
+  // Scroll the table, never the page: a click on the map must leave the map in view.
   useEffect(() => {
-    activeRow.current?.scrollIntoView?.({ block: "nearest" });
+    const box = scroller.current;
+    const row = activeRow.current;
+    if (!box || !row) return;
+    const header = box.querySelector("thead")?.offsetHeight ?? 0;
+    const visible =
+      row.offsetTop >= box.scrollTop + header &&
+      row.offsetTop + row.offsetHeight <= box.scrollTop + box.clientHeight;
+    if (!visible) box.scrollTo?.({ top: row.offsetTop - header, behavior: "smooth" });
   }, [activeMile]);
 
   return (
-    <div className="overflow-x-auto rounded-card border border-border">
+    <div
+      ref={scroller}
+      className="relative max-h-[28rem] overflow-auto rounded-card border border-border"
+    >
       <table className="w-full text-left text-sm tabular-nums">
         <caption className="sr-only">
           Weather at each checkpoint on route {route.id}, at the truck's estimated arrival time
         </caption>
-        <thead className="bg-surface text-xs text-muted-foreground">
+        <thead className="sticky top-0 z-10 bg-surface text-xs text-muted-foreground">
           <tr>
             <th scope="col" className="px-3 py-2 font-medium">
               Mile

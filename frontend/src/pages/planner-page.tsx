@@ -106,6 +106,7 @@ export function PlannerPage() {
             serverErrors={fieldErrors}
             submitting={plan.isFetching}
             submitDisabled={backend !== "ready"}
+            onCancel={trip && editing ? () => setEditing(false) : undefined}
           />
         ) : (
           <TripSummary

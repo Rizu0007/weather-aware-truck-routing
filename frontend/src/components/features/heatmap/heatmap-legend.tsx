@@ -11,9 +11,13 @@ export function HeatmapLegend() {
         <li key={level} className="flex items-center gap-1.5">
           <span
             aria-hidden="true"
-            className={cn("size-3 rounded-sm", RISK_BG[level], index === 0 && "opacity-40")}
+            className={cn(
+              "size-3 rounded-sm",
+              // Low is left clear on the map.
+              index === 0 ? "border border-muted-foreground" : RISK_BG[level],
+            )}
           />
-          {RISK_LABELS[level]}
+          {index === 0 ? `${RISK_LABELS[level]} (clear)` : RISK_LABELS[level]}
         </li>
       ))}
     </ul>

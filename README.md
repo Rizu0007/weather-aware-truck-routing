@@ -20,7 +20,8 @@ weather heatmap.
   says so ("Safer to leave 5 h later") and replans with one click.
 - **Map**: routes coloured by risk, checkpoint popups (ETA, wind, rain, snow, reason), click a route
   to select it.
-- **Corridor heatmap** with a 0–48 h slider and playback; scrubbing never calls the server.
+- **Corridor heatmap** with a 0–48 h slider and playback; scrubbing never calls the server. Low
+  cells stay clear, so only weather worth noticing is coloured.
 - **Risk profile** strip and a **checkpoint table**, both linked with the map; the table is also the
   accessible text version of the map.
 - Trips live in the URL, so a plan survives a refresh and can be shared.

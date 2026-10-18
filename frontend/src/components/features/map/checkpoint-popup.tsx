@@ -17,7 +17,7 @@ export function CheckpointPopup({
 }) {
   return (
     <div className="flex flex-col gap-2 text-sm">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 pr-6">
         <p className="font-semibold">
           Route {routeId} · mile {Math.round(checkpoint.mile)}
         </p>
@@ -31,11 +31,11 @@ export function CheckpointPopup({
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">Rain</dt>
-          <dd>{value(checkpoint.rain_in_hr, 2, "in/h")}</dd>
+          <dd>{value(checkpoint.rain_in_hr, 2, "in/hr")}</dd>
         </div>
         <div>
           <dt className="text-xs text-muted-foreground">Snow</dt>
-          <dd>{value(checkpoint.snow_in_hr, 1, "in/h")}</dd>
+          <dd>{value(checkpoint.snow_in_hr, 1, "in/hr")}</dd>
         </div>
       </dl>
       {checkpoint.reasons.length > 0 && <p>{checkpoint.reasons.join("; ")}</p>}

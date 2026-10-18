@@ -120,6 +120,18 @@ describe("PlannerPage: planning", () => {
     expect(screen.getByRole("combobox", { name: "Origin" })).toHaveValue("Dallas, Texas");
   });
 
+  it("Cancel leaves Edit without planning again", async () => {
+    const { fetch } = renderPlanner(SHARED, { "/api/trip-plans": tripPlan });
+    await screen.findByText("Take route B");
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Origin" })).not.toBeInTheDocument();
+    expect(tripPosts(fetch)).toHaveLength(1);
+  });
+
   it("shows skeletons and a status while planning", async () => {
     renderPlanner(SHARED, { "/api/trip-plans": () => new Promise<Response>(() => {}) });
 

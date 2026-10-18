@@ -139,9 +139,8 @@ export function sortKey(selectedId: string) {
   return expression<number>(["case", isSelected(selectedId), 1, 0]);
 }
 
-// Low cells are a faint tint (the corridor stays visible without hiding the basemap);
-// anything riskier is clearly coloured.
-const HEATMAP_LOW_OPACITY = 0.12;
+// Low cells stay clear: green boxes everywhere hid the (also green) routes and the basemap.
+const HEATMAP_LOW_OPACITY = 0;
 const HEATMAP_RISK_OPACITY = 0.42;
 
 /** Heatmap fill paint for one hour; the slider re-applies it with a new hour. */
