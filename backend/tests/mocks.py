@@ -126,6 +126,7 @@ def mock_forecast(weather=calm):
                 "rain": [v["rain"] for v in values],
                 "showers": [v["showers"] for v in values],
                 "snowfall": [v["snow"] for v in values],
+                "wind_direction_10m": [v.get("wind_from", 270.0) for v in values],
             }
             if i:
                 location["location_id"] = i

@@ -181,6 +181,7 @@ class HeatmapOutputSerializer(serializers.BaseSerializer):
                     "wind_mph": _rounded(cell.wind_mph, 1),
                     "rain_in_hr": _rounded(cell.rain_in_hr, 2),
                     "snow_in_hr": _rounded(cell.snow_in_hr, 1),
+                    "wind_from_deg": _rounded(cell.wind_from_deg, 0),
                 }
                 for cell in heatmap.cells
             ],

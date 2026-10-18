@@ -33,9 +33,12 @@ def test_returns_cells_in_the_documented_shape(client):
     assert set(data) == {"start", "hours", "cell_deg", "warnings", "cells"}
     assert data["hours"] == 49
     cell = data["cells"][0]
-    assert set(cell) == {"lon", "lat", "risk", "wind_mph", "rain_in_hr", "snow_in_hr"}
+    assert set(cell) == {
+        "lon", "lat", "risk", "wind_mph", "rain_in_hr", "snow_in_hr", "wind_from_deg",
+    }  # fmt: skip
     assert len(cell["risk"]) == len(cell["wind_mph"]) == 49
     assert cell["wind_mph"][0] == 7.0
+    assert cell["wind_from_deg"][0] == 270  # the mock's westerly
 
 
 @pytest.mark.parametrize(

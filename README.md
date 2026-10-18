@@ -22,6 +22,9 @@ weather heatmap.
   to select it.
 - **Corridor heatmap** with a 0–48 h slider and playback; scrubbing never calls the server. Low
   cells stay clear, so only weather worth noticing is coloured.
+- **Rain, snow and wind animation** in those cells, following the slider: drops lean with the wind,
+  streaks move with its direction and speed. One canvas, particles fade in and out (no popping),
+  capped at 1,500; off by default when the system asks for reduced motion, and it has a switch.
 - **Risk profile** strip and a **checkpoint table**, both linked with the map; the table is also the
   accessible text version of the map.
 - Trips live in the URL, so a plan survives a refresh and can be shared.

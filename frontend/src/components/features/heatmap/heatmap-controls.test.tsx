@@ -94,6 +94,46 @@ describe("HeatmapControls", () => {
     );
   });
 
+  it("the animation switch follows the heatmap: off and disabled when the heatmap is hidden", async () => {
+    const onMotionChange = vi.fn<(motion: boolean) => void>();
+    const { rerender } = render(
+      <HeatmapControls
+        heatmap={HEATMAP}
+        loading={false}
+        error={null}
+        visible
+        onVisibleChange={() => {}}
+        motion
+        onMotionChange={onMotionChange}
+        initialHour={0}
+        onHourChange={() => {}}
+        onHourCommit={() => {}}
+        onRetry={() => {}}
+      />,
+    );
+    const toggle = screen.getByRole("checkbox", { name: "Animate rain and wind" });
+
+    await userEvent.click(toggle);
+    expect(onMotionChange).toHaveBeenCalledWith(false);
+
+    rerender(
+      <HeatmapControls
+        heatmap={HEATMAP}
+        loading={false}
+        error={null}
+        visible={false}
+        onVisibleChange={() => {}}
+        motion
+        onMotionChange={onMotionChange}
+        initialHour={0}
+        onHourChange={() => {}}
+        onHourCommit={() => {}}
+        onRetry={() => {}}
+      />,
+    );
+    expect(toggle).toBeDisabled();
+  });
+
   it("says when an hour is all Low, since Low cells are clear on the map", () => {
     renderControls({ heatmap: withRisk(() => 0) });
 

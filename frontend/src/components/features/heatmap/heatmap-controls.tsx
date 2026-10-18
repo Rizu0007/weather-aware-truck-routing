@@ -19,6 +19,9 @@ interface HeatmapControlsProps {
   onRetry: () => void;
   visible: boolean;
   onVisibleChange: (visible: boolean) => void;
+  /** Animated rain, snow and wind on the map. */
+  motion?: boolean;
+  onMotionChange?: (motion: boolean) => void;
   initialHour: number;
   /** Every change while scrubbing or playing: update the map, nothing else. */
   onHourChange: (hour: number) => void;
@@ -33,6 +36,8 @@ export function HeatmapControls({
   onRetry,
   visible,
   onVisibleChange,
+  motion = false,
+  onMotionChange,
   initialHour,
   onHourChange,
   onHourCommit,
@@ -73,15 +78,29 @@ export function HeatmapControls({
             0–48 h after departure
           </span>
         </h2>
-        <label className="flex cursor-pointer items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={visible}
-            onChange={(event) => onVisibleChange(event.target.checked)}
-            className="size-4 accent-primary"
-          />
-          Show on map
-        </label>
+        <div className="flex flex-wrap items-center gap-4">
+          {onMotionChange && (
+            <label className="flex cursor-pointer items-center gap-2 text-sm has-disabled:cursor-default has-disabled:opacity-50">
+              <input
+                type="checkbox"
+                checked={motion}
+                disabled={!visible}
+                onChange={(event) => onMotionChange(event.target.checked)}
+                className="size-4 accent-primary"
+              />
+              Animate rain and wind
+            </label>
+          )}
+          <label className="flex cursor-pointer items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={visible}
+              onChange={(event) => onVisibleChange(event.target.checked)}
+              className="size-4 accent-primary"
+            />
+            Show on map
+          </label>
+        </div>
       </div>
 
       {loading && (

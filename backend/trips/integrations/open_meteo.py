@@ -18,6 +18,8 @@ PARALLEL_REQUESTS = 4
 SNAP_DEG = 0.05
 CACHE_TTL_S = 15 * 60
 HOURLY_FIELDS = ("wind_speed_10m", "rain", "showers", "snowfall")
+# Only drawn (the map animates wind with it), never scored, so a response without it still parses.
+DIRECTION_FIELD = "wind_direction_10m"
 TIME_FORMAT = "%Y-%m-%dT%H:%M"
 
 TO_MPH = {"mp/h": 1.0, "km/h": 1 / 1.609344, "m/s": 2.236936, "kn": 1.150779}
@@ -32,6 +34,8 @@ class HourlySeries:
     wind_mph: list[float | None]
     rain_in_hr: list[float | None]
     snow_in_hr: list[float | None]
+    # Degrees the wind blows from (meteorological); None per hour, or for the series, if absent.
+    wind_from_deg: list[float | None] | None = None
 
 
 def snap(coord: Coord) -> Coord:
@@ -62,7 +66,7 @@ def hourly(points: list[Coord], start: datetime, hours: int) -> list[HourlySerie
 
 
 def _cache_key(coord: Coord, start: datetime, hours: int) -> str:
-    return f"wx:{coord[0]:.2f}:{coord[1]:.2f}:{start:%Y%m%d%H}:{hours}"
+    return f"wx2:{coord[0]:.2f}:{coord[1]:.2f}:{start:%Y%m%d%H}:{hours}"
 
 
 def _fetch_all(coords: list[Coord], start: datetime, hours: int) -> dict[Coord, HourlySeries]:
@@ -76,7 +80,7 @@ def _fetch_batch(coords: list[Coord], start: datetime, hours: int) -> dict[Coord
     params = {
         "latitude": ",".join(f"{lat:.2f}" for _, lat in coords),
         "longitude": ",".join(f"{lon:.2f}" for lon, _ in coords),
-        "hourly": ",".join(HOURLY_FIELDS),
+        "hourly": ",".join((*HOURLY_FIELDS, DIRECTION_FIELD)),
         "wind_speed_unit": "mph",
         "precipitation_unit": "inch",
         "timezone": "GMT",
@@ -117,6 +121,9 @@ def _parse_location(location: dict, start: datetime, hours: int) -> HourlySeries
     ):
         raise ProviderError(PROVIDER, extra={"reason": "unexpected forecast window"})
 
+    direction = data.get(DIRECTION_FIELD)
+    if not isinstance(direction, list) or len(direction) != hours:
+        direction = None
     wind, rain, showers, snow = columns
     return HourlySeries(
         start=start,
@@ -126,6 +133,7 @@ def _parse_location(location: dict, start: datetime, hours: int) -> HourlySeries
             for r, s in zip(rain, showers, strict=True)
         ],
         snow_in_hr=[_scaled(v, snow_factor) for v in snow],
+        wind_from_deg=direction,
     )
 
 

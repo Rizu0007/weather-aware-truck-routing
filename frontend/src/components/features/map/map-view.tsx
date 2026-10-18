@@ -34,6 +34,7 @@ import {
   sortKey,
   SOURCES,
 } from "@/components/features/map/map-style";
+import { WeatherMotion } from "@/components/features/map/weather-motion";
 import type { Heatmap, PlannedRoute } from "@/types/api";
 
 // Vite needs the worker's URL spelled out (MapLibre docs, "Vite").
@@ -63,6 +64,8 @@ export interface MapViewProps {
   onActivateCheckpoint: (mile: number | null) => void;
   heatmap?: Heatmap;
   heatmapVisible?: boolean;
+  /** Animated rain, snow and wind in the heatmap cells (only while the heatmap shows). */
+  weatherMotion?: boolean;
   /** Hour shown when the heatmap first appears; later changes go through the handle. */
   initialHour?: number;
 }
@@ -85,10 +88,12 @@ export default function MapView({
   onActivateCheckpoint,
   heatmap,
   heatmapVisible = true,
+  weatherMotion = false,
   initialHour = 0,
 }: MapViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
+  const motion = useRef<WeatherMotion | null>(null);
   const [popupNode] = useState(() => document.createElement("div"));
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(() => !supportsWebGL());
@@ -98,6 +103,7 @@ export default function MapView({
   useImperativeHandle(ref, () => ({
     setHeatmapHour(next: number) {
       hour.current = next;
+      motion.current?.setHour(next);
       const instance = map.current;
       if (!instance?.getLayer(LAYERS.heatmap)) return;
       const paint = heatmapPaint(next);
@@ -151,6 +157,8 @@ export default function MapView({
       instance.addSource(SOURCES.checkpoints, { type: "geojson", data: checkpointPoints(route) });
       instance.addSource(SOURCES.endpoints, { type: "geojson", data: endpoints(route) });
       for (const layer of routeLayers(route.id)) instance.addLayer(layer);
+      motion.current = new WeatherMotion(instance);
+      motion.current.setHour(hour.current);
       setLoaded(true);
     });
     let styleLoaded = false;
@@ -181,6 +189,8 @@ export default function MapView({
     });
 
     return () => {
+      motion.current?.destroy();
+      motion.current = null;
       instance.remove();
       map.current = null;
     };
@@ -221,7 +231,12 @@ export default function MapView({
     const instance = map.current;
     if (!loaded || !instance || !heatmap) return;
     void source(instance, SOURCES.heatmap)?.setData(heatmapCells(heatmap));
+    motion.current?.setHeatmap(heatmap);
   }, [loaded, heatmap]);
+
+  useEffect(() => {
+    if (loaded) motion.current?.setEnabled(weatherMotion && heatmapVisible);
+  }, [loaded, weatherMotion, heatmapVisible]);
 
   useEffect(() => {
     const instance = map.current;

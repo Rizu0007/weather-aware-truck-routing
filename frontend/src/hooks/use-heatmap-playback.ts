@@ -1,14 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 
+import { prefersReducedMotion } from "@/utils/motion";
+
 const FRAME_MS = 600;
 const REDUCED_MOTION_FRAME_MS = 1_500;
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window.matchMedia === "function" &&
-    window.matchMedia("(prefers-reduced-motion: reduce)").matches
-  );
-}
 
 /** Steps through the hours while playing, looping back to the start. */
 export function useHeatmapPlayback(hours: number, hour: number, onHour: (hour: number) => void) {

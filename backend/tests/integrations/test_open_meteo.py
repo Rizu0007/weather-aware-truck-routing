@@ -28,6 +28,18 @@ def test_single_location_object_response():
     assert series.wind_mph == [6.2, 5.9, 2.4]
     assert series.rain_in_hr == [0.0, 0.0, 0.0]
     assert series.snow_in_hr == [0.0, 0.0, 0.0]
+    assert series.wind_from_deg is None  # the saved sample predates the direction field
+
+
+@responses.activate
+def test_wind_direction_is_read_when_present():
+    body = load_sample("open_meteo_single_location")
+    body["hourly"]["wind_direction_10m"] = [270, 315, None]
+    responses.get(URL, json=body)
+
+    [series] = hourly([DALLAS], SAMPLE_START, 3)
+
+    assert series.wind_from_deg == [270, 315, None]
 
 
 @responses.activate
@@ -54,7 +66,7 @@ def test_request_asks_for_mph_inches_utc_and_an_inclusive_window():
     # Rounded down to the hour; end_hour is inclusive, so 3 hours end at 23:00.
     assert params["start_hour"] == "2026-10-17T21:00"
     assert params["end_hour"] == "2026-10-17T23:00"
-    assert params["hourly"] == "wind_speed_10m,rain,showers,snowfall"
+    assert params["hourly"] == "wind_speed_10m,rain,showers,snowfall,wind_direction_10m"
     assert "apikey" not in params
 
 

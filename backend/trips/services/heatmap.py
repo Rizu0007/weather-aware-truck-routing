@@ -17,6 +17,7 @@ class HeatmapCell:
     wind_mph: list[float | None]
     rain_in_hr: list[float | None]
     snow_in_hr: list[float | None]
+    wind_from_deg: list[float | None]
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,7 @@ def build_heatmap(*, routes: list[list[Coord]], departure: datetime, load_lb: in
             wind_mph=s.wind_mph,
             rain_in_hr=s.rain_in_hr,
             snow_in_hr=s.snow_in_hr,
+            wind_from_deg=s.wind_from_deg or [None] * hours,
         )
         for center, s in zip(grid.centers, series, strict=True)
     ]

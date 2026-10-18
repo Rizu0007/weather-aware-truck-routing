@@ -23,6 +23,7 @@ import { useDelayedFlag } from "@/hooks/use-delayed-flag";
 import { useTripParams } from "@/hooks/use-trip-params";
 import { useHeatmap, useTripPlan } from "@/hooks/use-trip-plan";
 import { nextFullHour } from "@/utils/format";
+import { prefersReducedMotion } from "@/utils/motion";
 import type { TripParams } from "@/utils/trip-params";
 import { serverFieldErrors } from "@/utils/validate-trip";
 
@@ -59,6 +60,8 @@ export function PlannerPage() {
   const heatmap = useHeatmap(data);
   const mapHandle = useRef<MapHandle>(null);
   const [heatmapVisible, setHeatmapVisible] = useState(true);
+  // Off by default for users who asked their system for less motion.
+  const [weatherMotion, setWeatherMotion] = useState(() => !prefersReducedMotion());
   const checkpoint = useCheckpointSelection(`${plan.dataUpdatedAt}:${selected?.id}`);
 
   // Fetch the map code while the user fills in the form.
@@ -187,6 +190,7 @@ export function PlannerPage() {
                 ref={mapHandle}
                 heatmap={heatmap.data}
                 heatmapVisible={heatmapVisible}
+                weatherMotion={weatherMotion}
                 initialHour={hour}
                 routes={data.routes}
                 selectedId={selected.id}
@@ -208,6 +212,8 @@ export function PlannerPage() {
             onRetry={() => void heatmap.refetch()}
             visible={heatmapVisible}
             onVisibleChange={setHeatmapVisible}
+            motion={weatherMotion}
+            onMotionChange={setWeatherMotion}
             initialHour={hour}
             onHourChange={(next) => mapHandle.current?.setHeatmapHour(next)}
             onHourCommit={setHour}

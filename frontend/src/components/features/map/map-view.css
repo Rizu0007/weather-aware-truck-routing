@@ -51,6 +51,14 @@
   color: var(--foreground);
 }
 
+/* Weather animation canvas: over the map, never in the way of a click. */
+.weather-motion {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
 .maplibregl-cooperative-gesture-screen {
   background: rgb(13 26 46 / 0.75);
   color: var(--foreground);
