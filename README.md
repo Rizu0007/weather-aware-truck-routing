@@ -63,6 +63,31 @@ backend/.venv/bin/pre-commit install   # runs Ruff on staged backend files befor
 
 CI (`.github/workflows/ci.yml`) runs the same lint, format and test steps on every push and PR.
 
+## Testing
+
+| Layer | What | Command |
+|---|---|---|
+| Backend | 219 pytest tests: risk bands and load rules, checkpoints/ETAs, ranking, provider clients (mocked from real samples), API errors | `cd backend && uv run pytest` |
+| Frontend | ~210 Vitest + Testing Library tests: UI components, hooks, API client errors, pages, map/table wiring, WCAG contrast of the design tokens | `cd frontend && npm test` |
+| Time zones | The time suite under New York, Chicago, Los Angeles, London, Karachi and Kolkata, including the UK (25 Oct) and US (1 Nov) daylight-saving changes | `cd frontend && npm run test:zones` |
+| CI | All of the above plus lint, format, type check and build on every push | `.github/workflows/ci.yml` |
+
+End-to-end checks were run in a real Chrome (DevTools protocol, no extra dependencies) before each
+release step, against both a mock API and the real providers:
+
+- **User flow:** search places, keyboard selection, validation, plan, switch routes, reload from the
+  URL, edit and replan, unknown place, focus ring, phone layout.
+- **Map and heatmap:** risk-coloured routes, popups from the table and the risk profile, scrubbing
+  48 hours with **0 long tasks and 0 network requests**.
+- **States:** empty, loading and "still working" (>10 s), busy (503) with a countdown, provider down
+  (502), beyond the forecast (422, offers the latest departure), proxy error page, heatmap failing
+  alone, broken link, too-far departure, 404, single-road corridor, no road connection, past
+  departure, server down and cold start.
+- **Time zones:** a typed 2:00 PM departure is sent as the right UTC instant in each zone and shown
+  back as 2:00 PM; a UK browser shows "14:00 BST".
+
+All times are shown in the browser's own time zone and language; the API works in UTC.
+
 ## Backend API
 
 | Endpoint | Returns |
