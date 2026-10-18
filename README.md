@@ -39,6 +39,10 @@ npm test                     # Vitest (includes a WCAG contrast check of the des
 npm run build                # production build into dist/
 ```
 
+Frontend tests use real API responses captured from the backend (providers mocked, fixed clock) in
+`frontend/src/test/fixtures/`; a test fails if they stop matching `src/types/api.ts`. Regenerate them
+after changing a serializer: `cd backend && uv run python -m tests.capture_frontend_fixtures`.
+
 The browser only ever calls `/api/...` on its own origin: Vite proxies it in development, nginx in
 Docker and a `vercel.json` rewrite in production, so Django needs no CORS and no API URL or key is
 bundled.

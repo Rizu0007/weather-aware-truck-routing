@@ -1,14 +1,16 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createMemoryRouter, type RouteObject } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { describe, expect, it, vi } from "vitest";
 
 import { createRoutes, pageRoutes } from "@/routes/routes";
+import { createQueryWrapper, mockFetch } from "@/test/api";
 
 function renderAt(path: string, routeTable: RouteObject[] = createRoutes()) {
+  mockFetch({ "/api/health": { status: "ok" } });
   const router = createMemoryRouter(routeTable, { initialEntries: [path] });
-  render(<RouterProvider router={router} />);
+  render(<RouterProvider router={router} />, { wrapper: createQueryWrapper().wrapper });
   return router;
 }
 
@@ -66,4 +68,18 @@ describe("routes", () => {
 
     expect(router.state.location.pathname).toBe("/");
   });
+});
+
+it("shows the waking banner until the health check answers", async () => {
+  const router = createMemoryRouter(createRoutes(), { initialEntries: ["/"] });
+  let answer: (response: Response) => void = () => {};
+  vi.spyOn(globalThis, "fetch").mockImplementation(
+    () => new Promise<Response>((resolve) => (answer = resolve)),
+  );
+  render(<RouterProvider router={router} />, { wrapper: createQueryWrapper().wrapper });
+
+  expect(screen.getByRole("status")).toHaveTextContent("Connecting to the server");
+
+  answer(new Response('{"status":"ok"}', { headers: { "Content-Type": "application/json" } }));
+  await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
 });

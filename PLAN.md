@@ -502,7 +502,9 @@ frontend/
 | `useHeatmapPlayback` | Play/pause through hours | `(hours, onHour) → { playing, toggle }`; respects reduced motion | `HeatmapControls` |
 | `useRetryCountdown` | 429/503 countdown | `(seconds \| undefined) → secondsLeft` | `PlanError` |
 
-Dropped: `useLocalStorage` (the URL covers persistence) and `useAuth` (no auth). The MapLibre instance
+Built in C11: the first six (`useTripPlan` and `useHeatmap` share `use-trip-plan.ts`). `useHeatmapPlayback`
+and `useRetryCountdown` arrive with their components in C12. Dropped: `useLocalStorage` (the URL covers
+persistence) and `useAuth` (no auth). The MapLibre instance
 lives in `MapView` refs, not a hook (one user). The ESLint `react-hooks` plugin enforces the Rules of Hooks.
 
 ### 7.10 Rendering and performance

@@ -2,8 +2,11 @@ import { Outlet } from "react-router";
 
 import { AppFooter } from "@/components/layout/app-footer";
 import { AppHeader } from "@/components/layout/app-header";
+import { BackendStatusBanner } from "@/components/layout/backend-status-banner";
+import { useBackendHealth } from "@/hooks/use-backend-health";
 
 export function AppLayout() {
+  const backend = useBackendHealth();
   return (
     <div className="flex min-h-dvh flex-col">
       <a
@@ -13,6 +16,7 @@ export function AppLayout() {
         Skip to content
       </a>
       <AppHeader />
+      <BackendStatusBanner status={backend} />
       <main id="main" tabIndex={-1} className="flex flex-1 flex-col outline-none">
         <Outlet />
       </main>

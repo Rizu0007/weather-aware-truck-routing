@@ -1,0 +1,19 @@
+{
+ "message": "Invalid input.",
+ "extra": {
+  "fields": {
+   "origin": [
+    "This field is required."
+   ],
+   "destination": [
+    "This field is required."
+   ],
+   "departure": [
+    "This field is required."
+   ],
+   "load_lb": [
+    "This field is required."
+   ]
+  }
+ }
+}

@@ -1,0 +1,27 @@
+[
+ {
+  "label": "Paris, Texas",
+  "lat": 33.6617962,
+  "lon": -95.555513
+ },
+ {
+  "label": "Paris, Kentucky",
+  "lat": 38.2132087,
+  "lon": -84.2492072
+ },
+ {
+  "label": "Paris, Arkansas",
+  "lat": 35.2924747,
+  "lon": -93.7294452
+ },
+ {
+  "label": "Paris, Illinois",
+  "lat": 39.611146,
+  "lon": -87.6961374
+ },
+ {
+  "label": "Paris, Tennessee",
+  "lat": 36.3019461,
+  "lon": -88.3258578
+ }
+]

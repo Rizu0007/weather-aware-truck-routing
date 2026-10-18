@@ -1,6 +1,5 @@
 import { Spinner } from "@/components/ui/spinner";
-
-export type BackendStatus = "checking" | "waking" | "ready";
+import type { BackendStatus } from "@/hooks/use-backend-health";
 
 /** Shown while the free Render instance wakes up (it sleeps after 15 min idle). */
 export function BackendStatusBanner({ status }: { status: BackendStatus }) {
