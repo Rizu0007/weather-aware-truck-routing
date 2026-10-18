@@ -1,11 +1,10 @@
-"""One way to call a third-party JSON API: timeouts, retries, and errors as ProviderError.
+"""GET JSON from a provider with timeouts and retries; failures become ProviderError.
 
-Failures are mapped by status code. Provider error bodies differ between
-services (see API_NOTES.md), so they are logged, not parsed here; a caller can
-`accept` a status when the provider documents a machine-readable error code.
+Error bodies differ per provider, so they are logged, not parsed.
 """
 
 import logging
+import re
 import time
 
 import requests
@@ -15,27 +14,25 @@ from trips.exceptions import ProviderError
 logger = logging.getLogger(__name__)
 
 USER_AGENT = "weather-aware-truck-routing/1.0"
-TIMEOUT_S = (5, 20)  # (connect, read)
+TIMEOUT_S = (5, 10)  # (connect, read); 3 attempts must fit a 60 s request
 MAX_ATTEMPTS = 3
 BACKOFF_S = 0.5  # doubled after each failed attempt
 RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
+# Network errors quote the full URL, which can carry an API key.
+_API_KEY_PARAM = re.compile(r"(apikey=)[^&\s]+", re.IGNORECASE)
 
 
 def get_json(
     provider: str, url: str, params: dict | list, accept: frozenset[int] = frozenset({200})
 ) -> dict | list:
-    """GET `url` and return the decoded JSON body.
-
-    Network errors, 429 and 5xx are retried with exponential backoff. A status
-    outside `accept`, or a body that isn't JSON, raises ProviderError at once.
-    """
+    """Retries network errors, 429 and 5xx; any other status outside `accept` fails at once."""
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
             response = requests.get(
                 url, params=params, timeout=TIMEOUT_S, headers={"User-Agent": USER_AGENT}
             )
         except requests.RequestException as exc:
-            failure = f"{type(exc).__name__}: {exc}"
+            failure = _API_KEY_PARAM.sub(r"\1***", f"{type(exc).__name__}: {exc}")
             extra = {}
         else:
             if response.status_code in accept:

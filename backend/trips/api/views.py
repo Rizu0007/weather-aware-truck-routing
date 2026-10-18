@@ -13,14 +13,14 @@ from trips.services.trip_planning import plan_trip
 
 
 class HealthApi(APIView):
-    """Liveness check; the frontend also calls it to wake a sleeping instance."""
+    """Also used by the frontend to wake a sleeping Render instance."""
 
     def get(self, request: Request) -> Response:
         return Response({"status": "ok"})
 
 
 class PlaceSearchApi(APIView):
-    """Autocomplete for the origin and destination fields."""
+    throttle_scope = "places"
 
     def get(self, request: Request) -> Response:
         params = PlaceSearchInputSerializer(data=request.query_params)
@@ -30,7 +30,7 @@ class PlaceSearchApi(APIView):
 
 
 class TripPlanCreateApi(APIView):
-    """Route options with weather risk along each, ranked, for one departure and load."""
+    throttle_scope = "trip-plans"
 
     def post(self, request: Request) -> Response:
         params = TripPlanInputSerializer(data=request.data)

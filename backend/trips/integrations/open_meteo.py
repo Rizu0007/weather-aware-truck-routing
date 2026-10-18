@@ -1,11 +1,4 @@
-"""Hourly forecasts from Open-Meteo for many points at once.
-
-Shapes handled here (see API_NOTES.md, section 2):
-- one location returns an object, several return a list;
-- more than ~500 locations in one URL gives HTTP 414, so requests are batched;
-- units are checked against `hourly_units` and converted if they aren't mph / inch;
-- `rain` and `showers` are separate fields and are summed.
-"""
+"""Hourly Open-Meteo forecasts for many points, batched and cached."""
 
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
@@ -19,7 +12,7 @@ from trips.exceptions import ProviderError
 from trips.integrations.http import get_json
 
 PROVIDER = "open-meteo"
-BATCH_SIZE = 200
+BATCH_SIZE = 200  # ~500+ locations overflow the URL (HTTP 414)
 PARALLEL_REQUESTS = 4
 # The model grid is ~3 km, so points closer than this share a forecast.
 SNAP_DEG = 0.05
@@ -27,7 +20,6 @@ CACHE_TTL_S = 15 * 60
 HOURLY_FIELDS = ("wind_speed_10m", "rain", "showers", "snowfall")
 TIME_FORMAT = "%Y-%m-%dT%H:%M"
 
-# Factor to the unit we use for each unit Open-Meteo can report.
 TO_MPH = {"mp/h": 1.0, "km/h": 1 / 1.609344, "m/s": 2.236936, "kn": 1.150779}
 TO_INCH = {"inch": 1.0, "mm": 1 / 25.4, "cm": 1 / 2.54}
 
@@ -48,11 +40,7 @@ def snap(coord: Coord) -> Coord:
 
 
 def hourly(points: list[Coord], start: datetime, hours: int) -> list[HourlySeries]:
-    """Forecast series for every point, in the same order as `points`.
-
-    `start` is rounded down to the hour. Points are snapped to a 0.05° grid, so
-    nearby points share one lookup and one cache entry.
-    """
+    """One series per point, in order. `start` is floored to the hour."""
     if start.tzinfo is None:
         raise ValueError("start must be timezone-aware")
     if hours < 1:
@@ -99,6 +87,7 @@ def _fetch_batch(coords: list[Coord], start: datetime, hours: int) -> dict[Coord
         params["apikey"] = settings.OPEN_METEO_API_KEY
 
     body = get_json(PROVIDER, settings.OPEN_METEO_URL, params)
+    # One location comes back as an object, several as a list.
     locations = [body] if isinstance(body, dict) else body
     if not isinstance(locations, list) or len(locations) != len(coords):
         raise ProviderError(PROVIDER, extra={"reason": "location count mismatch"})
@@ -145,7 +134,7 @@ def _scaled(value: float | None, factor: float) -> float | None:
 
 
 def _rain_total(rain, showers, rain_factor: float, showers_factor: float) -> float | None:
-    """Large-scale rain plus convective showers; missing only if both are missing."""
+    """Open-Meteo splits rain into large-scale rain and convective showers."""
     if rain is None and showers is None:
         return None
     return (rain or 0.0) * rain_factor + (showers or 0.0) * showers_factor

@@ -71,3 +71,16 @@ def test_non_json_body_is_a_provider_error():
 
     with pytest.raises(ProviderError):
         get_json("example", URL, {})
+
+
+@responses.activate
+def test_api_keys_are_redacted_from_logs(caplog):
+    responses.get(
+        URL, body=requests.ConnectionError(f"Max retries exceeded with url: {URL}?apikey=s3cret")
+    )
+
+    with pytest.raises(ProviderError):
+        get_json("example", URL, {"apikey": "s3cret"})
+
+    assert "s3cret" not in caplog.text
+    assert "apikey=***" in caplog.text

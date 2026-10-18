@@ -14,7 +14,7 @@ class Checkpoint:
     mile: float
     coord: Coord
     eta: datetime
-    # The stretch of road this checkpoint's weather stands for: half-way to each neighbour.
+    # Stretch of road this checkpoint stands for: half-way to each neighbour.
     start_mile: float
     end_mile: float
 
@@ -24,12 +24,10 @@ class Checkpoint:
 
 
 class TruckTimeline:
-    """Cumulative driving time at every vertex of a route.
+    """Driving time to every vertex, capped at the truck's top speed.
 
-    `segment_seconds` are the routing engine's per-segment times. When `total_seconds`
-    is given they are scaled to add up to it (OSRM's route duration includes penalties
-    its per-segment annotations leave out; see API_NOTES.md). Each segment is then
-    slowed to the truck's speed cap where needed.
+    Segment times are scaled to `total_seconds`: OSRM's route total includes turn
+    penalties that its per-segment annotations leave out.
     """
 
     def __init__(

@@ -1,8 +1,7 @@
-"""Driving routes from OSRM (API_NOTES.md, section 1).
+"""Driving routes from OSRM.
 
-Every error comes back as HTTP 400 with a documented `code` (NoRoute,
-InvalidValue, InvalidQuery, ...). That code is the only way to tell "these
-places aren't connected by road" from a bad request, so 400 bodies are read here.
+OSRM returns every error as HTTP 400, so its documented `code` field is the only
+way to tell "no road connects these places" from a bad request.
 """
 
 from dataclasses import dataclass
@@ -26,7 +25,7 @@ class OsrmRoute:
 
 
 def routes(origin: Coord, destination: Coord) -> list[OsrmRoute]:
-    """Fastest route plus OSRM's own alternatives (usually 0-1 of them)."""
+    """Fastest route plus OSRM's own alternatives (usually none or one)."""
     return _request([origin, destination], alternatives="3")
 
 
@@ -62,7 +61,6 @@ def _request(points: list[Coord], alternatives: str) -> list[OsrmRoute]:
 def _parse_route(route: dict) -> OsrmRoute:
     try:
         coords = [(lon, lat) for lon, lat in route["geometry"]["coordinates"]]
-        # Annotations are per leg; concatenated they line up with the geometry.
         seconds = [s for leg in route["legs"] for s in leg["annotation"]["duration"]]
         distance_m, duration_s = route["distance"], route["duration"]
     except (KeyError, TypeError, ValueError) as exc:

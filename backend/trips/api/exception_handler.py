@@ -1,8 +1,4 @@
-"""Uniform JSON error bodies: {"message": str, "extra": {...}}.
-
-Covers DRF exceptions, our ApplicationError hierarchy, unexpected exceptions
-raised inside API views, and Django-level 404/500 for non-DRF paths.
-"""
+"""Every error, from DRF or Django, becomes {"message": str, "extra": {...}}."""
 
 import logging
 

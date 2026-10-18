@@ -66,7 +66,7 @@ def nearest_town(point: Coord, radius_km: float) -> Place | None:
 
 
 def _places(body) -> list[tuple[dict, Place]]:
-    """(properties, Place) for every nameable feature in a GeoJSON FeatureCollection."""
+    """(properties, Place) for each feature that has a name or street."""
     try:
         found = []
         for feature in body["features"]:
@@ -80,10 +80,7 @@ def _places(body) -> list[tuple[dict, Place]]:
 
 
 def _label(props: dict) -> str:
-    """A readable label such as "Dallas, Texas", or "" if the feature has no name or street.
-
-    Optional fields vary per feature, so the label is built from whichever exist.
-    """
+    """E.g. "Dallas, Texas"; "" if there's no name or street. Fields vary per feature."""
     street = " ".join(p for p in (props.get("housenumber"), props.get("street")) if p)
     name = props.get("name") or street
     if not name:

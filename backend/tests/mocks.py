@@ -20,16 +20,13 @@ DALLAS = (-96.797, 32.7767)
 HOUSTON = (-95.3698, 29.7604)
 
 
-# --- OSRM -------------------------------------------------------------------
-
-
 def native():
-    """OSRM's answer to the direct Dallas-Houston request: one route (OSRM surprise 1)."""
+    """Direct Dallas-Houston answer: OSRM returns only one route."""
     return load_sample("osrm_route_short_alternatives")
 
 
 def via_route(shift_lon=0.0, duration_factor=1.0):
-    """The saved via-point route (x1.29 the fastest, 4 % overlap), optionally moved or slowed."""
+    """Saved via-point route (x1.29 the fastest, 4 % overlap), optionally moved or slowed."""
     body = load_sample("osrm_route_via_point")
     route = body["routes"][0]
     route["geometry"]["coordinates"] = [
@@ -54,9 +51,6 @@ def mock_osrm(direct, via_answers=()):
     responses.add_callback(responses.GET, OSRM_URL, callback=callback)
 
 
-# --- Photon -----------------------------------------------------------------
-
-
 def town(name, lon, lat):
     feature = copy.deepcopy(load_sample("photon_reverse_town")["features"][0])
     feature["properties"]["name"] = name
@@ -75,20 +69,12 @@ def mock_towns(answers):
     )
 
 
-# --- Open-Meteo -------------------------------------------------------------
-
-
 def calm(lon, lat, hour):
     return {"wind": 7.0, "rain": 0.0, "showers": 0.0, "snow": 0.0}
 
 
 def mock_forecast(weather=calm):
-    """Answer any Open-Meteo request in the sample's shape, with values from `weather`.
-
-    `weather(lon, lat, hour)` returns {"wind", "rain", "showers", "snow"} for the
-    requested point and the hour index from start_hour. As the real API does, one
-    location gets an object and several get a list (Open-Meteo surprise 1).
-    """
+    """Answer Open-Meteo in the sample's shape; `weather(lon, lat, hour)` gives the values."""
     template = load_sample("open_meteo_single_location")
 
     def callback(request):

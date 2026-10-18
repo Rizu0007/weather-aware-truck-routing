@@ -1,9 +1,4 @@
-"""Route risk summaries and the recommendation order.
-
-Order (brief + agreed interpretation 3): fewest No Travel miles, fewest Severe
-miles, fewest High miles, lowest mile-weighted average risk, shortest time.
-Each route is compared on the first criterion where it differs from the next.
-"""
+"""Risk summaries and the recommendation order: No Travel, Severe, High miles, avg risk, time."""
 
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -24,7 +19,7 @@ class RiskSummary:
 
 
 def summarize(stretches: list[tuple[float, RiskLevel]]) -> RiskSummary:
-    """Summary from (miles, level) pairs, one per checkpoint's stretch of road."""
+    """From (miles, level) pairs, one per checkpoint."""
     miles_by_level = dict.fromkeys(RiskLevel, 0.0)
     for miles, level in stretches:
         miles_by_level[level] += miles
@@ -89,7 +84,7 @@ def sort_key(candidate: Candidate) -> tuple:
 
 
 def rank(candidates: list[Candidate]) -> Ranking:
-    """Best route first, with a one-line reason it beats the runner-up."""
+    """Best route first, with the reason it beats the runner-up."""
     if not candidates:
         raise ValueError("nothing to rank")
     ordered = sorted(candidates, key=sort_key)  # stable: equal routes keep their order

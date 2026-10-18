@@ -19,7 +19,7 @@ TRUCK_MAX_SPEED_MPH = 65
 FORECAST_HORIZON = timedelta(days=15) - timedelta(hours=6)
 # The heatmap shows 48 h from departure, so the plan must leave room for it.
 HEATMAP_HOURS = 48
-# ~50 m: invisible at route zoom, cuts the geometry sent to the browser several-fold.
+# ~50 m: invisible at route zoom, shrinks the geometry several-fold.
 SIMPLIFY_TOLERANCE_DEG = 0.0005
 
 
@@ -65,7 +65,6 @@ class TripPlan:
 def plan_trip(
     *, origin: Coord, destination: Coord, departure: datetime, load_lb: int, interval_mi: int
 ) -> TripPlan:
-    """Raises NoRouteError, ForecastHorizonError or ProviderError."""
     found = find_route_options(origin, destination)
     timelines = [
         TruckTimeline(
@@ -163,7 +162,7 @@ def _planned_route(
 
 
 def _risk_segments(timeline: TruckTimeline, risks: list[CheckpointRisk]) -> list[RiskSegment]:
-    """Merge neighbouring checkpoints with the same level into one drawable stretch."""
+    """Neighbouring checkpoints at the same level merge into one drawn stretch."""
     runs: list[tuple[RiskLevel, float, float]] = []
     for r in risks:
         level, start, end = r.assessment.level, r.checkpoint.start_mile, r.checkpoint.end_mile

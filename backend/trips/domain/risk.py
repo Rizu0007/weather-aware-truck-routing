@@ -1,11 +1,10 @@
-"""Weather risk classification from the assessment's threshold table and load rules.
+"""Risk levels from the brief's threshold table and load rules.
 
-Band edges (agreed interpretation, see ASSESSMENT.md):
-- each band includes its lower bound: 25 mph is Moderate, 0.25 in/hr rain is High;
-- the No Travel band follows the table literally: wind >= 55 mph, rain > 1.00 in/hr,
-  snow > 3.0 in/hr (so exactly 1.00 in/hr rain is still Severe).
+Bands include their lower bound (25 mph is Moderate). No Travel follows the table
+literally: wind >= 55, rain > 1.00, snow > 3.0, so 1.00 in/hr rain is still Severe.
 """
 
+import math
 from dataclasses import dataclass
 from enum import IntEnum
 
@@ -68,10 +67,7 @@ def classify_snow(in_per_hr: float) -> RiskLevel:
 
 
 def apply_load_rules(wind_level: RiskLevel, load_lb: float) -> RiskLevel:
-    """Escalate the wind level for heavy loads.
-
-    >= 55 mph is already No Travel for any load (classify_wind handles it).
-    """
+    """Heavy loads escalate wind by one level (>= 55 mph is already No Travel)."""
     if wind_level == RiskLevel.SEVERE and load_lb > SEVERE_WIND_NO_TRAVEL_LOAD_LB:
         return RiskLevel.NO_TRAVEL
     if wind_level == RiskLevel.HIGH and load_lb > HIGH_WIND_SEVERE_LOAD_LB:
@@ -89,10 +85,7 @@ class Assessment:
 
 
 def assess(*, wind_mph: float, rain_in_hr: float, snow_in_hr: float, load_lb: float) -> Assessment:
-    """Overall risk is the worst of wind (after load rules), rain and snow.
-
-    `reasons` names every condition that sets the overall level (empty when Low).
-    """
+    """Worst of wind (after load rules), rain and snow, with the conditions that set it."""
     base_wind = classify_wind(wind_mph)
     wind = apply_load_rules(base_wind, load_lb)
     rain = classify_rain(rain_in_hr)
@@ -103,18 +96,24 @@ def assess(*, wind_mph: float, rain_in_hr: float, snow_in_hr: float, load_lb: fl
     if level > RiskLevel.LOW:
         if wind == level:
             load_note = f" with a {load_lb:,.0f} lb load" if wind != base_wind else ""
-            reasons.append(f"Wind {wind_mph:.0f} mph{load_note}")
+            reasons.append(f"Wind {_floor(wind_mph, 0)} mph{load_note}")
         if rain == level:
-            reasons.append(f"Rain {rain_in_hr:.2f} in/hr")
+            reasons.append(f"Rain {_floor(rain_in_hr, 2)} in/hr")
         if snow == level:
-            reasons.append(f"Snow {snow_in_hr:.1f} in/hr")
+            reasons.append(f"Snow {_floor(snow_in_hr, 1)} in/hr")
     return Assessment(level, wind, rain, snow, tuple(reasons))
+
+
+def _floor(value: float, decimals: int) -> str:
+    """Round down so a value never reads as the next band (44.6 mph is "44", not "45")."""
+    factor = 10**decimals
+    return f"{math.floor(value * factor + 1e-9) / factor:.{decimals}f}"
 
 
 def level_series(
     *, wind_mph: list[float], rain_in_hr: list[float], snow_in_hr: list[float], load_lb: float
 ) -> list[int]:
-    """Overall level for each hour of a forecast series, as plain ints (for the heatmap)."""
+    """Overall level per hour, as ints for the heatmap."""
     return [
         int(max(apply_load_rules(classify_wind(w), load_lb), classify_rain(r), classify_snow(s)))
         for w, r, s in zip(wind_mph, rain_in_hr, snow_in_hr, strict=True)

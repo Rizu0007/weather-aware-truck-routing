@@ -145,3 +145,18 @@ def test_labels():
         "Severe",
         "No Travel",
     ]
+
+
+@pytest.mark.parametrize(
+    ("conditions", "reason"),
+    [
+        ({"wind_mph": 44.6}, "Wind 44 mph"),
+        ({"rain_in_hr": 0.249}, "Rain 0.24 in/hr"),
+        ({"snow_in_hr": 1.99}, "Snow 1.9 in/hr"),
+        ({"rain_in_hr": 0.29}, "Rain 0.29 in/hr"),
+    ],
+)
+def test_reason_values_never_read_as_the_next_band(conditions, reason):
+    weather = {"wind_mph": 0, "rain_in_hr": 0, "snow_in_hr": 0} | conditions
+
+    assert assess(**weather, load_lb=10_000).reasons == (reason,)

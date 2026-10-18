@@ -1,8 +1,4 @@
-"""Settings for the truck routing API.
-
-One module for every environment: anything that differs between local and
-production comes from environment variables (see .env.example).
-"""
+"""One settings module for every environment; differences come from env vars."""
 
 from pathlib import Path
 
@@ -18,11 +14,12 @@ env = environ.Env(
     OPEN_METEO_URL=(str, "https://api.open-meteo.com/v1/forecast"),
     OPEN_METEO_API_KEY=(str, ""),
     PHOTON_URL=(str, "https://photon.komoot.io"),
+    # Reverse proxies in front of Django (Vercel, Render); used to find the client IP.
+    NUM_PROXIES=(int, 0),
 )
 if (BASE_DIR / ".env").exists():
     environ.Env.read_env(BASE_DIR / ".env")
 
-# Required: raises ImproperlyConfigured when missing.
 SECRET_KEY = env("DJANGO_SECRET_KEY")
 DEBUG = env("DJANGO_DEBUG")
 ALLOWED_HOSTS = env("DJANGO_ALLOWED_HOSTS")
@@ -58,9 +55,12 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [],
     "UNAUTHENTICATED_USER": None,
     "EXCEPTION_HANDLER": "trips.api.exception_handler.exception_handler",
+    # Per client IP; protects the free provider quotas (Open-Meteo: 600 calls/min).
+    "DEFAULT_THROTTLE_CLASSES": ["rest_framework.throttling.ScopedRateThrottle"],
+    "DEFAULT_THROTTLE_RATES": {"trip-plans": "20/min", "places": "120/min"},
+    "NUM_PROXIES": env("NUM_PROXIES"),
 }
 
-# Third-party providers (all keyless by default).
 OSRM_URL = env("OSRM_URL")
 OPEN_METEO_URL = env("OPEN_METEO_URL")
 OPEN_METEO_API_KEY = env("OPEN_METEO_API_KEY")

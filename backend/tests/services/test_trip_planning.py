@@ -1,9 +1,4 @@
-"""Trip planning end to end, with every provider mocked from the saved samples.
-
-Dallas-Houston: route A is I-45 (fastest); route B goes west via the saved
-via-point route. A storm box sits on I-45 around Centerville, which route B
-passes ~50 miles to the west.
-"""
+"""Dallas-Houston with mocked providers: A is I-45, B runs ~50 mi west of it."""
 
 from datetime import timedelta
 from itertools import pairwise

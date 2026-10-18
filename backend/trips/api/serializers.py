@@ -18,8 +18,6 @@ class PlaceOutputSerializer(serializers.Serializer):
     lon = serializers.FloatField()
 
 
-# --- Trip plans -------------------------------------------------------------
-
 MIN_TRIP_MILES = 1
 MAX_LOAD_LB = 80_000  # US federal gross weight limit
 DEPARTURE_GRACE = timedelta(hours=1)

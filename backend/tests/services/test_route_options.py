@@ -7,6 +7,7 @@ from tests.conftest import load_sample
 from tests.mocks import (
     DALLAS,
     HOUSTON,
+    REVERSE_URL,
     is_via_request,
     mock_osrm,
     mock_towns,
@@ -125,3 +126,28 @@ def test_route_options_are_cached():
     find_route_options(DALLAS, HOUSTON)
 
     assert len(responses.calls) == calls
+
+
+@responses.activate
+def test_town_lookup_outage_keeps_the_direct_route_and_is_not_cached():
+    mock_osrm((200, native()))
+    responses.get(REVERSE_URL, status=503)
+
+    result = find_route_options(DALLAS, HOUSTON)
+
+    assert len(result.options) == 1
+    assert result.warnings == ["Alternative routes are temporarily unavailable."]
+    calls = len(responses.calls)
+    find_route_options(DALLAS, HOUSTON)
+    assert len(responses.calls) > calls
+
+
+@responses.activate
+def test_via_route_outage_keeps_routes_found_before_it():
+    mock_osrm((200, native()), [(200, via_route())] + [(503, {})] * 3)  # 503 is retried
+    mock_towns([town("Franklin", -96.48, 31.03), town("Cameron", -96.98, 30.85)])
+
+    result = find_route_options(DALLAS, HOUSTON)
+
+    assert [o.via_town for o in result.options] == [None, "Franklin, Texas"]
+    assert result.warnings == ["Alternative routes are temporarily unavailable."]
