@@ -419,8 +419,10 @@ Feature components only render props and call hooks; UI components never call th
 - **Errors:** `ErrorBoundary` on the root (full page) and on a pathless layout child, so the header
   and footer survive a page error; read with `useRouteError` / `isRouteErrorResponse`
   ([error boundaries](https://reactrouter.com/how-to/error-boundary)).
-- **Navigation:** `<NavLink>` in the header and `<Link>` elsewhere. `useNavigate` is not needed: submit
-  updates search params through `useSearchParams`.
+- **Navigation:** `<Link>` only (one page, so the header has no nav menu and no `<NavLink>`).
+  `useNavigate` is not needed: submit updates search params through `useSearchParams`.
+- **Route config** (C10): `createRoutes(pages)` builds root layout → pathless error boundary → pages,
+  so tests can mount the real tree with an extra page.
 
 | Path | Page | Layout | Loaded |
 |---|---|---|---|
