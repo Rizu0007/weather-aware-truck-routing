@@ -137,3 +137,17 @@ def test_weather_outage_is_a_502(client):
 
     assert response.status_code == 502
     assert response.json()["extra"]["provider"] == "open-meteo"
+
+
+def test_malformed_json_is_a_400(client):
+    response = client.post(URL, "{not json", content_type="application/json")
+
+    assert response.status_code == 400
+    assert set(response.json()) == {"message", "extra"}
+
+
+def test_wrong_method_is_a_405(client):
+    response = client.get(URL)
+
+    assert response.status_code == 405
+    assert response.json()["message"] == 'Method "GET" not allowed.'
