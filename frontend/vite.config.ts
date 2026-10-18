@@ -17,6 +17,8 @@ export default defineConfig(({ mode }) => {
       environment: "jsdom",
       setupFiles: ["./src/test/setup.ts"],
       restoreMocks: true,
+      // Local-time conversions depend on the zone; pin it so tests pass anywhere (CI is UTC).
+      env: { TZ: "America/Chicago" },
     },
   };
 });
