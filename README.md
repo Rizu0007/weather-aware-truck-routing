@@ -22,9 +22,11 @@ weather heatmap.
   to select it.
 - **Corridor heatmap** with a 0–48 h slider and playback; scrubbing never calls the server. Drawn
   like weather radar: smooth rounded areas in crisp risk colours, Low left clear.
-- **Wind flow** over the corridor, Windy-style: streamlines drift with each hour's wind direction and
-  speed and leave fading trails; strong wind stands out, calm air barely shows. It has a switch and
-  is off by default when the system asks for reduced motion.
+- **Weather animation**, only where it raises risk (the brief's Moderate thresholds): white
+  streamlines for wind 25+ mph (Windy-style, following its direction), light-blue streaks for rain,
+  drifting dots for snow. A legend names each; it has a switch and is off with reduced motion.
+- **Truck marker**: as the slider moves, a dot shows where the truck is on the selected route at
+  that hour ("the truck is at mile 154 on route B"), so the weather's time and place line up.
 - **Risk profile** strip and a **checkpoint table**, both linked with the map; the table is also the
   accessible text version of the map.
 - Trips live in the URL, so a plan survives a refresh and can be shared.

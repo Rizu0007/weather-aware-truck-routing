@@ -22,6 +22,8 @@ import {
   endpoints,
   riskSegments,
   routeLines,
+  truckAt,
+  truckPoint,
 } from "@/components/features/map/map-data";
 import {
   BASEMAP_STYLE,
@@ -32,7 +34,7 @@ import {
   SOURCES,
 } from "@/components/features/map/map-style";
 import { RiskField } from "@/components/features/map/risk-field";
-import { WindFlow } from "@/components/features/map/wind-flow";
+import { WeatherFlow } from "@/components/features/map/weather-flow";
 import type { Heatmap, PlannedRoute } from "@/types/api";
 
 // Vite needs the worker's URL spelled out (MapLibre docs, "Vite").
@@ -62,7 +64,7 @@ export interface MapViewProps {
   onActivateCheckpoint: (mile: number | null) => void;
   heatmap?: Heatmap;
   heatmapVisible?: boolean;
-  /** Wind drawn as flowing streamlines over the corridor (only while the heatmap shows). */
+  /** Wind, rain and snow animated over the corridor (only while the heatmap shows). */
   weatherMotion?: boolean;
   /** Hour shown when the heatmap first appears; later changes go through the handle. */
   initialHour?: number;
@@ -92,7 +94,7 @@ export default function MapView({
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
   const field = useRef<RiskField | null>(null);
-  const wind = useRef<WindFlow | null>(null);
+  const wind = useRef<WeatherFlow | null>(null);
   const [popupNode] = useState(() => document.createElement("div"));
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(() => !supportsWebGL());
@@ -104,14 +106,26 @@ export default function MapView({
       hour.current = next;
       field.current?.setHour(next);
       wind.current?.setHour(next);
+      moveTruck();
     },
   }));
 
   // Handlers registered once on the map read the latest props through refs.
-  const latest = useRef({ onSelectRoute, onActivateCheckpoint, selected });
+  const latest = useRef({ onSelectRoute, onActivateCheckpoint, selected, heatmap });
   useEffect(() => {
-    latest.current = { onSelectRoute, onActivateCheckpoint, selected };
+    latest.current = { onSelectRoute, onActivateCheckpoint, selected, heatmap };
   });
+
+  /** The truck's place on the selected route at the heatmap's hour (none until it loads). */
+  function moveTruck() {
+    const { selected: route, heatmap: grid } = latest.current;
+    const instance = map.current;
+    if (!instance) return;
+    const time = grid ? Date.parse(grid.start) + hour.current * 3_600_000 : null;
+    void source(instance, SOURCES.truck)?.setData(
+      truckPoint(time === null ? null : truckAt(route, time)),
+    );
+  }
 
   // Create the map once.
   useEffect(() => {
@@ -146,10 +160,11 @@ export default function MapView({
       instance.addSource(SOURCES.routes, { type: "geojson", data: routeLines(routes) });
       instance.addSource(SOURCES.checkpoints, { type: "geojson", data: checkpointPoints(route) });
       instance.addSource(SOURCES.endpoints, { type: "geojson", data: endpoints(route) });
+      instance.addSource(SOURCES.truck, { type: "geojson", data: truckPoint(null) });
       for (const layer of routeLayers(route.id)) instance.addLayer(layer);
       // Under the routes, so they stay readable over any weather.
       field.current = new RiskField(instance, LAYERS.casing);
-      wind.current = new WindFlow(instance);
+      wind.current = new WeatherFlow(instance);
       setLoaded(true);
     });
     let styleLoaded = false;
@@ -226,6 +241,10 @@ export default function MapView({
     wind.current?.setHour(hour.current);
     wind.current?.setHeatmap(heatmap);
   }, [loaded, heatmap]);
+
+  useEffect(() => {
+    if (loaded) moveTruck();
+  }, [loaded, heatmap, selected]);
 
   useEffect(() => {
     if (!loaded) return;

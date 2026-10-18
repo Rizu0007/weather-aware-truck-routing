@@ -32,6 +32,9 @@ export function RiskProfile({ route, activeMile, onHover, onActivate }: RiskProf
   const total = route.distance_mi;
   const x = (mile: number) => (mile / total) * WIDTH;
   const shown = hovered ?? route.checkpoints.find((c) => c.mile === activeMile) ?? null;
+  // As tall as the worst level needs: an all-Low route is a slim strip, not an empty band.
+  const worst = Math.max(...route.checkpoints.map((c) => RISK_LEVELS.indexOf(c.level)));
+  const top = HEIGHT - (MIN_BAR + (worst / 4) * (HEIGHT - MIN_BAR));
 
   function checkpointAt(event: MouseEvent<SVGSVGElement>): Checkpoint | undefined {
     const box = event.currentTarget.getBoundingClientRect();
@@ -42,11 +45,12 @@ export function RiskProfile({ route, activeMile, onHover, onActivate }: RiskProf
   return (
     <figure className="flex flex-col gap-1.5">
       <svg
-        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        viewBox={`0 ${top} ${WIDTH} ${HEIGHT - top}`}
+        style={{ height: HEIGHT - top }}
         preserveAspectRatio="none"
         role="img"
         aria-label={describeRisk(route)}
-        className="h-16 w-full cursor-crosshair overflow-visible"
+        className="w-full cursor-crosshair overflow-visible"
         onPointerMove={(event) => {
           const checkpoint = checkpointAt(event);
           setHovered(checkpoint ?? null);
@@ -83,7 +87,7 @@ export function RiskProfile({ route, activeMile, onHover, onActivate }: RiskProf
           <line
             x1={x(shown.mile)}
             x2={x(shown.mile)}
-            y1={0}
+            y1={top}
             y2={HEIGHT}
             className="stroke-foreground"
             strokeWidth={2}

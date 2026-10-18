@@ -51,8 +51,8 @@
   color: var(--foreground);
 }
 
-/* Wind animation canvas: over the map, never in the way of a click. */
-.wind-flow {
+/* Weather animation canvases: over the map, never in the way of a click. */
+.weather-flow {
   position: absolute;
   top: 0;
   left: 0;

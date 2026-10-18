@@ -3,14 +3,16 @@ import { useMemo, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { HeatmapLegend } from "@/components/features/heatmap/heatmap-legend";
+import { truckAt } from "@/components/features/map/map-data";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Slider } from "@/components/ui/slider";
 import { Spinner } from "@/components/ui/spinner";
 import { HEATMAP_MAX_HOUR } from "@/constants/limits";
 import { useHeatmapPlayback } from "@/hooks/use-heatmap-playback";
-import type { Heatmap } from "@/types/api";
+import type { Heatmap, PlannedRoute } from "@/types/api";
 import { formatDateTime } from "@/utils/format";
+import { describeWeather, weatherCounts } from "@/utils/weather";
 
 interface HeatmapControlsProps {
   heatmap: Heatmap | undefined;
@@ -19,7 +21,9 @@ interface HeatmapControlsProps {
   onRetry: () => void;
   visible: boolean;
   onVisibleChange: (visible: boolean) => void;
-  /** Wind drawn as flowing streamlines on the map. */
+  /** The selected route: the hour line says where its truck is then. */
+  route?: PlannedRoute;
+  /** Wind, rain and snow animated on the map. */
   motion?: boolean;
   onMotionChange?: (motion: boolean) => void;
   initialHour: number;
@@ -36,6 +40,7 @@ export function HeatmapControls({
   onRetry,
   visible,
   onVisibleChange,
+  route,
   motion = false,
   onMotionChange,
   initialHour,
@@ -60,11 +65,21 @@ export function HeatmapControls({
     [heatmap, hours],
   );
   const risky = riskyCells[hour] ?? 0;
+  const weather = useMemo(() => (heatmap ? weatherCounts(heatmap) : []), [heatmap]);
 
   const time = heatmap
     ? formatDateTime(new Date(Date.parse(heatmap.start) + hour * 3_600_000).toISOString())
     : "";
-  const label = `+${hour} h · ${time}`;
+  const truck =
+    heatmap && route ? truckAt(route, Date.parse(heatmap.start) + hour * 3_600_000) : null;
+  const truckText = !truck
+    ? ""
+    : truck.state === "waiting"
+      ? "the truck hasn't left yet"
+      : truck.state === "arrived"
+        ? `the truck has arrived (route ${route!.id})`
+        : `the truck is at mile ${Math.round(truck.mile)} on route ${route!.id}`;
+  const label = `+${hour} h · ${time}${truckText ? ` · ${truckText}` : ""}`;
 
   return (
     <section
@@ -88,7 +103,7 @@ export function HeatmapControls({
                 onChange={(event) => onMotionChange(event.target.checked)}
                 className="size-4 accent-primary"
               />
-              Animate wind
+              Animate weather
             </label>
           )}
           <label className="flex cursor-pointer items-center gap-2 text-sm">
@@ -153,16 +168,25 @@ export function HeatmapControls({
               onValueCommit={([next]) => onHourCommit(next)}
             />
           </div>
-          <p className="text-sm tabular-nums" aria-hidden="true">
-            <span className="font-semibold">+{hour} h</span>{" "}
-            <span className="text-muted-foreground">· {time}</span>{" "}
-            <span className="text-muted-foreground">
-              ·{" "}
+          <div className="flex flex-col gap-0.5 text-sm tabular-nums">
+            <p aria-hidden="true">
+              <span className="font-semibold">+{hour} h</span>{" "}
+              <span className="text-muted-foreground">· {time}</span>
+            </p>
+            {truckText && (
+              <p className="text-primary">
+                <span aria-hidden="true">● </span>
+                {truckText[0].toUpperCase() + truckText.slice(1)}
+              </p>
+            )}
+            <p className="text-muted-foreground">
               {risky === 0
-                ? "all Low along the corridor"
+                ? "All Low along the corridor"
                 : `${risky} area${risky === 1 ? "" : "s"} Moderate or worse`}
-            </span>
-          </p>
+              {" · "}
+              {describeWeather(weather[hour] ?? { wind: 0, rain: 0, snow: 0 })}
+            </p>
+          </div>
           <HeatmapLegend />
           {heatmap.warnings.map((warning) => (
             <p key={warning} className="text-xs text-muted-foreground">

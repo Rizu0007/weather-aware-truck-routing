@@ -29,6 +29,18 @@ import { serverFieldErrors } from "@/utils/validate-trip";
 
 const SLOW_PLAN_MS = 10_000;
 
+const HOW_IT_WORKS = [
+  ["Enter the trip", "Two places, when you leave, and the load."],
+  [
+    "We check every route",
+    "Up to three routes, with the forecast at each checkpoint for when the truck gets there.",
+  ],
+  [
+    "Pick the safest",
+    "Compare risk on the map, play the next 48 hours of weather, take the recommended route.",
+  ],
+] as const;
+
 // MapLibre is the largest dependency: load it after the form, in its own chunk.
 const loadMap = () => import("@/components/features/map/map-view");
 const MapView = lazy(loadMap);
@@ -169,11 +181,21 @@ export function PlannerPage() {
 
       <div className="flex min-w-0 flex-col gap-4">
         {!trip && (
-          <div className="flex flex-col items-start gap-3 rounded-card border border-dashed border-border p-6">
-            <p className="text-muted-foreground">
-              Choose two places, a departure time and the load to compare up to three routes by
-              forecast weather risk and travel time.
-            </p>
+          <div className="flex flex-col items-start gap-4 rounded-card border border-dashed border-border p-6">
+            <h2 className="text-base font-semibold">How it works</h2>
+            <ol className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
+              {HOW_IT_WORKS.map(([title, text], index) => (
+                <li key={title} className="flex gap-3">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
+                    {index + 1}
+                  </span>
+                  <span>
+                    <span className="block font-medium text-foreground">{title}</span>
+                    {text}
+                  </span>
+                </li>
+              ))}
+            </ol>
             <Button variant="secondary" onClick={() => planTrip(exampleTrip())}>
               Try Dallas → Houston
             </Button>
@@ -212,6 +234,7 @@ export function PlannerPage() {
             onRetry={() => void heatmap.refetch()}
             visible={heatmapVisible}
             onVisibleChange={setHeatmapVisible}
+            route={selected}
             motion={weatherMotion}
             onMotionChange={setWeatherMotion}
             initialHour={hour}

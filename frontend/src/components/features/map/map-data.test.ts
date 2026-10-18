@@ -7,6 +7,7 @@ import {
   endpoints,
   riskSegments,
   routeLines,
+  truckAt,
 } from "@/components/features/map/map-data";
 import tripPlan from "@/test/fixtures/trip-plan.json";
 import type { TripPlan } from "@/types/api";
@@ -61,5 +62,33 @@ describe("map data", () => {
     expect(north).toBe(Math.max(...all.map(([, lat]) => lat)));
     expect(east).toBeGreaterThan(west);
     expect(north).toBeGreaterThan(south);
+  });
+});
+
+describe("truckAt", () => {
+  const route = PLAN.routes[0];
+  const at = (iso: string) => Date.parse(iso);
+  const [first, second] = route.checkpoints;
+  const last = route.checkpoints[route.checkpoints.length - 1];
+
+  it("waits at the origin before departure, and stays at the destination after arrival", () => {
+    expect(truckAt(route, at(first.eta) - 3_600_000)).toMatchObject({ state: "waiting", mile: 0 });
+    expect(truckAt(route, at(last.eta) + 3_600_000)).toMatchObject({
+      state: "arrived",
+      mile: last.mile,
+    });
+  });
+
+  it("is between checkpoints in proportion to the time between their ETAs", () => {
+    const halfway = (at(first.eta) + at(second.eta)) / 2;
+    const truck = truckAt(route, halfway);
+
+    expect(truck.state).toBe("driving");
+    expect(truck.mile).toBeCloseTo((first.mile + second.mile) / 2);
+  });
+
+  it("sits on the drawn road: the origin at mile 0, the last vertex on arrival", () => {
+    expect(truckAt(route, at(first.eta)).lonLat).toEqual(route.geometry[0]);
+    expect(truckAt(route, at(last.eta)).lonLat).toEqual(route.geometry[route.geometry.length - 1]);
   });
 });

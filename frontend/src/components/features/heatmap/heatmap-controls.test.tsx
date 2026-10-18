@@ -6,6 +6,7 @@ import { HeatmapControls } from "@/components/features/heatmap/heatmap-controls"
 import { ApiError } from "@/api/client";
 import heatmapFixture from "@/test/fixtures/heatmap.json";
 import type { Heatmap } from "@/types/api";
+import { describeWeather } from "@/utils/weather";
 
 const HEATMAP: Heatmap = heatmapFixture;
 
@@ -65,15 +66,15 @@ describe("HeatmapControls", () => {
     const { onHourChange, onHourCommit } = renderControls({ initialHour: 47 });
 
     await userEvent.click(screen.getByRole("button", { name: "Play through the hours" }));
-    await act(() => vi.advanceTimersByTimeAsync(600));
+    await act(() => vi.advanceTimersByTimeAsync(1_000));
     expect(onHourChange).toHaveBeenLastCalledWith(48);
-    await act(() => vi.advanceTimersByTimeAsync(600));
+    await act(() => vi.advanceTimersByTimeAsync(1_000));
     expect(onHourChange).toHaveBeenLastCalledWith(0); // loops
 
     await userEvent.click(screen.getByRole("button", { name: "Pause" }));
     expect(onHourCommit).toHaveBeenLastCalledWith(0);
     onHourChange.mockClear();
-    await act(() => vi.advanceTimersByTimeAsync(1_200));
+    await act(() => vi.advanceTimersByTimeAsync(2_000));
     expect(onHourChange).not.toHaveBeenCalled();
   });
 
@@ -91,6 +92,9 @@ describe("HeatmapControls", () => {
 
     expect(screen.getByRole("list", { name: "Risk colours" })).toHaveTextContent(
       "Low (clear)ModerateHighSevereNo Travel",
+    );
+    expect(screen.getByRole("list", { name: "What moves on the map" })).toHaveTextContent(
+      "Wind 25+ mphRain 0.1+ in/hrSnow 0.5+ in/hr",
     );
   });
 
@@ -111,7 +115,7 @@ describe("HeatmapControls", () => {
         onRetry={() => {}}
       />,
     );
-    const toggle = screen.getByRole("checkbox", { name: "Animate wind" });
+    const toggle = screen.getByRole("checkbox", { name: "Animate weather" });
 
     await userEvent.click(toggle);
     expect(onMotionChange).toHaveBeenCalledWith(false);
@@ -137,13 +141,13 @@ describe("HeatmapControls", () => {
   it("says when an hour is all Low, since Low cells are clear on the map", () => {
     renderControls({ heatmap: withRisk(() => 0) });
 
-    expect(screen.getByText("· all Low along the corridor")).toBeInTheDocument();
+    expect(screen.getByText(/^All Low along the corridor/)).toBeInTheDocument();
   });
 
   it("counts the areas at Moderate or worse for the chosen hour", () => {
     renderControls({ heatmap: withRisk((i) => (i < 2 ? 2 : 0)) });
 
-    expect(screen.getByText("· 2 areas Moderate or worse")).toBeInTheDocument();
+    expect(screen.getByText(/^2 areas Moderate or worse/)).toBeInTheDocument();
   });
 
   it("loading and error states", async () => {
@@ -179,5 +183,15 @@ describe("HeatmapControls", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("The weather service is busy.");
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(onRetry).toHaveBeenCalled();
+  });
+});
+
+describe("describeWeather", () => {
+  it("names what moves on the map, and where", () => {
+    expect(describeWeather({ wind: 4, rain: 1, snow: 0 })).toBe(
+      "wind 25+ mph in 4 areas · rain in 1 area",
+    );
+    expect(describeWeather({ wind: 0, rain: 0, snow: 2 })).toBe("snow in 2 areas");
+    expect(describeWeather({ wind: 0, rain: 0, snow: 0 })).toBe("no strong wind, rain or snow");
   });
 });

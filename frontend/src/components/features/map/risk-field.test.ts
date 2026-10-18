@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { fieldCorners, fieldGrid } from "@/components/features/map/risk-field";
-import { windField } from "@/components/features/map/wind-flow";
+import { weatherField } from "@/components/features/map/weather-flow";
 import heatmapFixture from "@/test/fixtures/heatmap.json";
 import type { Heatmap, HeatmapCell } from "@/types/api";
 
@@ -46,20 +46,20 @@ describe("fieldGrid", () => {
   });
 });
 
-describe("windField", () => {
+describe("weatherField", () => {
   const heatmap = { ...HEATMAP, cell_deg: 0.5, cells: [cellAt(-96.25, 31.25, 20, 270)] };
   const grid = fieldGrid(heatmap);
 
   it("wind from the west blows east (x), in mph", () => {
-    const [vx, vy] = windField(heatmap, grid, 0);
-    expect(vx).toBeCloseTo(20);
-    expect(vy).toBeCloseTo(0);
+    const { windX, windY } = weatherField(heatmap, grid, 0);
+    expect(windX[0]).toBeCloseTo(20);
+    expect(windY[0]).toBeCloseTo(0);
   });
 
   it("wind from the north blows down the screen (y)", () => {
     const north = { ...heatmap, cells: [cellAt(-96.25, 31.25, 20, 0)] };
-    const [vx, vy] = windField(north, grid, 0);
-    expect(vx).toBeCloseTo(0);
-    expect(vy).toBeCloseTo(20);
+    const { windX, windY } = weatherField(north, grid, 0);
+    expect(windX[0]).toBeCloseTo(0);
+    expect(windY[0]).toBeCloseTo(20);
   });
 });
