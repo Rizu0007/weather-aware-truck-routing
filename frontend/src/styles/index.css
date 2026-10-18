@@ -1,0 +1,68 @@
+@import "tailwindcss";
+@import "@fontsource-variable/dm-sans";
+@import "./tokens.css";
+
+@theme inline {
+  --font-sans: "DM Sans Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-map-panel: var(--map-panel);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-primary: var(--primary);
+  --color-primary-end: var(--primary-end);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-success: var(--success);
+  --color-success-surface: var(--success-surface);
+  --color-warning: var(--warning);
+  --color-warning-surface: var(--warning-surface);
+  --color-destructive: var(--destructive);
+  --color-destructive-surface: var(--destructive-surface);
+  --color-destructive-inline: var(--destructive-inline);
+  --color-info: var(--info);
+  --color-info-surface: var(--info-surface);
+  --color-risk-low: var(--risk-low);
+  --color-risk-moderate: var(--risk-moderate);
+  --color-risk-high: var(--risk-high);
+  --color-risk-severe: var(--risk-severe);
+  --color-risk-no-travel: var(--risk-no-travel);
+  --color-risk-foreground: var(--risk-foreground);
+
+  --radius-control: var(--radius-control);
+  --radius-card: var(--radius-card);
+  --radius-pill: var(--radius-pill);
+  --shadow-card: var(--shadow-card);
+  --shadow-glow: var(--shadow-glow);
+}
+
+@layer base {
+  html {
+    background: var(--background);
+  }
+
+  body {
+    @apply bg-background font-sans text-foreground antialiased;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

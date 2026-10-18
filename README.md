@@ -1,6 +1,6 @@
 # Weather-Aware Truck Routing
 
-Next.js (React) + Django app that helps a truck driver pick the safest route based on forecast weather,
+React (Vite) + Django app that helps a truck driver pick the safest route based on forecast weather,
 load weight and travel time. See [ASSESSMENT.md](ASSESSMENT.md) for the brief and the agreed
 interpretations of ambiguous rules.
 
@@ -8,7 +8,7 @@ interpretations of ambiguous rules.
 
 ## Setup
 
-Requirements: Python 3.12, [uv](https://docs.astral.sh/uv/), Node.js 24 (frontend, added later).
+Requirements: Python 3.12, [uv](https://docs.astral.sh/uv/), Node.js 24 (22.22+ works).
 
 ### Backend
 
@@ -25,11 +25,30 @@ uv run pytest           # tests
 Tests mock every external API with [`responses`](https://github.com/getsentry/responses), built
 from the saved samples in `backend/tests/fixtures/`, so they run offline.
 
+### Frontend
+
+```bash
+cd frontend
+cp .env.example .env.local   # optional: DEV_BACKEND_URL if Django isn't on 127.0.0.1:8000
+npm ci
+npm run dev                  # http://localhost:5173, /api proxied to Django
+npm run lint                 # ESLint
+npm run format:check         # Prettier
+npm run typecheck            # tsc
+npm test                     # Vitest (includes a WCAG contrast check of the design tokens)
+npm run build                # production build into dist/
+```
+
+The browser only ever calls `/api/...` on its own origin: Vite proxies it in development, nginx in
+Docker and a `vercel.json` rewrite in production, so Django needs no CORS and no API URL or key is
+bundled.
+
 ### Docker
 
 ```bash
-docker compose --profile test run --rm backend-tests   # lint + tests
-docker compose up -d backend                           # API on http://localhost:8000
+docker compose --profile test run --rm backend-tests    # backend lint + tests
+docker compose --profile test run --rm frontend-tests   # frontend lint + types + tests
+docker compose up -d --build                            # app on http://localhost:8080, API on :8000
 ```
 
 ### Git hooks

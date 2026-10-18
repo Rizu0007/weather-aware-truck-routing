@@ -9,6 +9,17 @@ services:
       DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-docker-local-only}
       DJANGO_DEBUG: "False"
       DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend
+      NUM_PROXIES: "1"  # the frontend's nginx
+
+  frontend:
+    build:
+      context: ./frontend
+      target: runtime
+    ports:
+      - "8080:80"
+    depends_on:
+      backend:
+        condition: service_healthy
 
   # docker compose --profile test run --rm backend-tests
   backend-tests:
@@ -18,3 +29,10 @@ services:
       target: test
     environment:
       DJANGO_SECRET_KEY: test-only
+
+  # docker compose --profile test run --rm frontend-tests
+  frontend-tests:
+    profiles: [test]
+    build:
+      context: ./frontend
+      target: test

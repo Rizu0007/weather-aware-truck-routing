@@ -1,0 +1,51 @@
+/*
+ * Design tokens (PLAN.md §7.3, palette D). Components use the Tailwind names
+ * mapped in index.css, never these hex values directly.
+ * Contrast pairs are checked by tokens.test.ts.
+ */
+:root {
+  color-scheme: dark;
+
+  --background: #0d1a2e;
+  --surface: #1a2332;
+  --surface-raised: #223047;
+  --map-panel: rgb(13 26 46 / 0.92); /* solid: no backdrop blur over the WebGL map */
+
+  --foreground: #e2e8f0;
+  --muted-foreground: #94a3b8;
+  --border: #2d3748;
+  --input: #64748b;
+  --ring: #40e0d0;
+
+  --primary: #40e0d0;
+  --primary-end: #20b2aa; /* gradient end */
+  --primary-hover: #5eead4;
+  --primary-foreground: #0d1a2e;
+  --secondary: #12343b;
+  --secondary-foreground: #99f6e4;
+
+  --success: #34d399;
+  --success-surface: #0f2e26;
+  --warning: #fbbf24;
+  --warning-surface: #33270a;
+  --destructive: #fca5a5;
+  --destructive-surface: #3a1620;
+  --destructive-inline: #f87171;
+  --info: #93c5fd;
+  --info-surface: #172a46;
+
+  /* Risk scale, tuned for the OpenFreeMap dark basemap (#0c0c0c). */
+  --risk-low: #22c55e;
+  --risk-moderate: #facc15;
+  --risk-high: #fb923c;
+  --risk-severe: #ef4444;
+  --risk-no-travel: #e879f9;
+  --risk-foreground: #0d1a2e; /* text on any risk colour */
+  --route-casing: #0d1a2e;
+
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-pill: 20px;
+  --shadow-card: 0 8px 24px rgb(0 0 0 / 0.25);
+  --shadow-glow: 0 8px 32px rgb(64 224 208 / 0.15);
+}
