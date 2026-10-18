@@ -406,7 +406,7 @@ API versioning (`/api/v1/`) is **OVERKILL**: one client, one deploy.
 
 | Job | Steps |
 |---|---|
-| `backend` | `actions/checkout@v7` → `astral-sh/setup-uv@v10` (uv 0.13.1, cache on) → `uv python install` → `uv sync --locked` → `uv run ruff check` → `uv run ruff format --check` → `uv run pytest` |
+| `backend` | `actions/checkout@v7` → `astral-sh/setup-uv@v10.2.0` (exact tag: setup-uv publishes no `v10` major tag; uv 0.13.1, cache on) → `uv python install` → `uv sync --locked` → `uv run ruff check` → `uv run ruff format --check` → `uv run pytest` |
 | `frontend` | `actions/checkout@v7` → `actions/setup-node@v7` (Node 24, npm cache) → `npm ci` → `npx eslint .` → `npx prettier --check .` → `npx tsc --noEmit` → `npx vitest run` → `npx next build` |
 
 Action versions from GitHub releases: checkout v7.0.1, setup-node v7.1.0, setup-uv v10.3.0. The uv
