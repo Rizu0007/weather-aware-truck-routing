@@ -26,8 +26,7 @@ class Checkpoint:
 class TruckTimeline:
     """Driving time to every vertex, capped at the truck's top speed.
 
-    Segment times are scaled to `total_seconds`: OSRM's route total includes turn
-    penalties that its per-segment annotations leave out.
+    Scaled to `total_seconds`: OSRM's total includes turn penalties its segments leave out.
     """
 
     def __init__(

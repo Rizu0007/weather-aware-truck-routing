@@ -2,7 +2,7 @@ import type { AddLayerObject } from "maplibre-gl";
 
 import { RISK_LEVELS, type RiskLevel } from "@/constants/risk";
 
-// Basemap: free, keyless, unlimited views; attribution is required (RESEARCH §12.2).
+// Basemap: free and keyless; attribution is required (shown in the map and the footer).
 export const BASEMAP_STYLE = "https://tiles.openfreemap.org/styles/dark";
 
 export const SOURCES = {
@@ -22,10 +22,7 @@ export const LAYERS = {
   endpoints: "endpoints",
 } as const;
 
-/**
- * A MapLibre expression. They're JSON arrays that MapLibre validates at runtime; the
- * style-spec tuple types are too strict for TypeScript to infer from array literals.
- */
+/** A MapLibre expression (validated at runtime; its tuple types are too strict to infer). */
 function expression<T>(value: unknown[]): T {
   return value as T;
 }

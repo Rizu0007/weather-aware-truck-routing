@@ -53,10 +53,7 @@ def _center(i: int, j: int, cell_deg: float) -> Coord:
 
 
 def _samples(line: list[Coord], step_deg: float) -> set[Coord]:
-    """Points along the line at most `step_deg` apart, snapped to a `step_deg` grid.
-
-    Snapping collapses dense or overlapping geometry to a few hundred samples.
-    """
+    """Points at most `step_deg` apart along the line, snapped to a grid so overlaps collapse."""
     samples = set()
     for (x1, y1), (x2, y2) in pairwise(line):
         steps = max(1, math.ceil(max(abs(x2 - x1), abs(y2 - y1)) / step_deg))

@@ -38,4 +38,4 @@ class ProviderBusyError(ProviderError):
     """The provider's rate limit is used up; retrying straight away won't help."""
 
     status_code = 503
-    default_message = "The weather or routing service is busy. Please try again in a minute."
+    default_message = "A routing, places or weather service is busy. Please try again in a minute."

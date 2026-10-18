@@ -31,10 +31,7 @@ export function routeLines(routes: PlannedRoute[]): FeatureCollection<LineString
   };
 }
 
-/**
- * Checkpoints of one route. Feature ids are the checkpoint's index, so
- * map feature-state (hover/selected) can address them.
- */
+/** Checkpoints of one route; ids are their index so feature-state can address them. */
 export function checkpointPoints(route: PlannedRoute): FeatureCollection<Point> {
   const features: PointFeature[] = route.checkpoints.map((checkpoint, index) => ({
     type: "Feature",

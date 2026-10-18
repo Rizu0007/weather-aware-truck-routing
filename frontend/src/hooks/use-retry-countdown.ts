@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 
-/**
- * Seconds left before a retry makes sense, counting down from `seconds`.
- * A new `startedAt` (e.g. the error's time) restarts the count.
- */
+/** Seconds left of `seconds`, counted from `startedAt` (a new error restarts it). */
 export function useRetryCountdown(seconds: number | undefined, startedAt: number): number {
   const [now, setNow] = useState(() => Date.now());
 

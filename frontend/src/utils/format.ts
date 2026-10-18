@@ -1,4 +1,4 @@
-// All times display in the browser's time zone (agreed in PLAN §6).
+// All times display in the browser's time zone.
 
 export function formatMiles(miles: number): string {
   return `${Math.round(miles).toLocaleString("en-US")} mi`;
@@ -16,10 +16,8 @@ export function formatPounds(pounds: number): string {
   return `${pounds.toLocaleString("en-US")} lb`;
 }
 
-/**
- * Dates use the browser's language, so a UK user sees "14:00 BST" and a US user "2:00 PM PDT".
- * `locale` and `timeZone` parameters are for tests; the app uses the browser's.
- */
+// The browser's language: a UK user sees "14:00 BST", a US user "2:00 PM PDT".
+// The `locale` and `timeZone` options are for tests.
 const BROWSER_LOCALE = typeof navigator === "undefined" ? "en-US" : navigator.language;
 
 interface ZoneOptions {
@@ -74,9 +72,8 @@ export function nextFullHour(now = new Date()): Date {
 }
 
 /**
- * A checkpoint's ETA in a table column: "7:28 PM", plus the day when it changes from
- * `previousIso` ("Mon 12:20 AM"), plus the zone when that changes, as it does on a trip
- * across a daylight-saving switch ("Sun 1:20 AM EST").
+ * An ETA for the table: "7:28 PM", with the day when it changes ("Mon 12:20 AM") and the zone
+ * when it changes, e.g. across a daylight-saving switch ("1:20 AM EST").
  */
 export function formatClock(iso: string, previousIso?: string, options: ZoneOptions = {}): string {
   const { timeZone, locale = BROWSER_LOCALE } = options;

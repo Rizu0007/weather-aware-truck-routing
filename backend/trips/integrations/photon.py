@@ -1,4 +1,4 @@
-"""Place search and town lookup from Photon (API_NOTES.md, section 3)."""
+"""Place search and town lookup from Photon."""
 
 import hashlib
 from dataclasses import dataclass

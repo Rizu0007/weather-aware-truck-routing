@@ -1,7 +1,6 @@
 """Up to three distinct routes: OSRM's own, then routes forced through nearby towns.
 
-Towns, not raw offset points: a raw point snaps to whatever road is nearest,
-often a dirt road, while towns sit on through-roads.
+Towns, not raw offset points: those snap to the nearest road, often a dirt road.
 """
 
 import logging
@@ -81,10 +80,9 @@ def find_route_options(origin: Coord, destination: Coord) -> RouteOptions:
 def _via_town_routes(
     origin: Coord, destination: Coord, kept: list[OsrmRoute]
 ) -> tuple[list[tuple[OsrmRoute, str]], bool]:
-    """Accepted (route, town) pairs, and whether the search was cut short.
+    """Accepted (route, town) pairs, and whether a failure or the time budget cut it short.
 
-    Extra routes are optional: a failed lookup, or running out of time on slow
-    public servers, ends the search with what has been found instead of failing the plan.
+    Extra routes are optional, so the plan goes ahead with whatever was found.
     """
     deadline = time.monotonic() + ALTERNATIVES_BUDGET_S
     fastest_s = min(route.duration_s for route in kept)

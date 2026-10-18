@@ -1,7 +1,6 @@
 """Driving routes from OSRM.
 
-OSRM returns every error as HTTP 400, so its documented `code` field is the only
-way to tell "no road connects these places" from a bad request.
+Every OSRM error is HTTP 400; only its `code` field tells "no road" from a bad request.
 """
 
 from dataclasses import dataclass

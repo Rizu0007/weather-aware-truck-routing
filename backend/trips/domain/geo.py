@@ -27,10 +27,7 @@ def cumulative_miles(coords: list[Coord]) -> list[float]:
 
 
 def locate(cum_miles: list[float], mile: float) -> tuple[int, float]:
-    """Segment index containing `mile` and the fraction (0-1) along that segment.
-
-    Miles outside the line are clamped to its ends.
-    """
+    """(segment index, fraction 0-1 along it) for `mile`, clamped to the line's ends."""
     last_segment = len(cum_miles) - 2
     if mile <= 0:
         return 0, 0.0

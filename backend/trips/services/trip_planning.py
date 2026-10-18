@@ -13,6 +13,7 @@ from trips.services.forecast_window import check_forecast_horizon
 from trips.services.route_options import RouteOption, find_route_options
 
 TRUCK_MAX_SPEED_MPH = 65
+Weather = tuple[float | None, float | None, float | None]  # wind mph, rain and snow in/hr
 # ~50 m: invisible at route zoom, shrinks the geometry several-fold.
 SIMPLIFY_TOLERANCE_DEG = 0.0005
 
@@ -106,13 +107,13 @@ def plan_trip(
 
 def _weather_by_checkpoint(
     checkpoints: list[list[Checkpoint]], departure: datetime, longest_trip: timedelta
-) -> dict[Checkpoint, tuple[float | None, float | None, float | None]]:
+) -> dict[Checkpoint, Weather]:
     """(wind, rain, snow) at the forecast hour nearest each checkpoint's ETA."""
     flat = [c for route in checkpoints for c in route]
-    start = departure.replace(minute=0, second=0, microsecond=0)
-    # +2: the nearest hour can round up past the arrival hour.
+    # The series starts at the departure's hour (floored in UTC); +2 because the
+    # nearest hour can round up past the arrival hour.
     hours = math.ceil(longest_trip / timedelta(hours=1)) + 2
-    series = open_meteo.hourly([c.coord for c in flat], start, hours)
+    series = open_meteo.hourly([c.coord for c in flat], departure, hours)
 
     weather = {}
     for checkpoint, s in zip(flat, series, strict=True):
@@ -121,7 +122,7 @@ def _weather_by_checkpoint(
     return weather
 
 
-def _assess_checkpoint(checkpoint: Checkpoint, weather, load_lb: int) -> CheckpointRisk:
+def _assess_checkpoint(checkpoint: Checkpoint, weather: Weather, load_lb: int) -> CheckpointRisk:
     wind, rain, snow = weather
     assessment = assess(
         wind_mph=wind or 0.0, rain_in_hr=rain or 0.0, snow_in_hr=snow or 0.0, load_lb=load_lb

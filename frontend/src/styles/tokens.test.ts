@@ -3,7 +3,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-// Contrast pairs from PLAN.md §7.3, checked against the real token values.
+// WCAG AA contrast pairs, checked against the real token values.
 // Read from disk: Vitest stubs CSS imports, even with ?raw.
 const css = readFileSync(new URL("./tokens.css", import.meta.url), "utf8");
 const tokens = Object.fromEntries(

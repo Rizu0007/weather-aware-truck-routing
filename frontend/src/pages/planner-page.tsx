@@ -17,6 +17,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useBackendHealth } from "@/hooks/use-backend-health";
+import { useCheckpointSelection } from "@/hooks/use-checkpoint-selection";
 import { useDelayedFlag } from "@/hooks/use-delayed-flag";
 import { useTripParams } from "@/hooks/use-trip-params";
 import { useHeatmap, useTripPlan } from "@/hooks/use-trip-plan";
@@ -29,9 +30,6 @@ const SLOW_PLAN_MS = 10_000;
 // MapLibre is the largest dependency: load it after the form, in its own chunk.
 const loadMap = () => import("@/components/features/map/map-view");
 const MapView = lazy(loadMap);
-
-/** A checkpoint mile that only applies to the plan and route it was chosen on. */
-type ScopedMile = { scope: string; mile: number } | null;
 
 function exampleTrip(): TripParams {
   return {
@@ -60,11 +58,7 @@ export function PlannerPage() {
   const heatmap = useHeatmap(data);
   const mapHandle = useRef<MapHandle>(null);
   const [heatmapVisible, setHeatmapVisible] = useState(true);
-  const scope = `${plan.dataUpdatedAt}:${selected?.id}`;
-  const [active, setActive] = useState<ScopedMile>(null);
-  const [hover, setHover] = useState<ScopedMile>(null);
-  const activeMile = active?.scope === scope ? active.mile : null;
-  const hoverMile = hover?.scope === scope ? hover.mile : null;
+  const checkpoint = useCheckpointSelection(`${plan.dataUpdatedAt}:${selected?.id}`);
 
   // Fetch the map code while the user fills in the form.
   useEffect(() => {
@@ -135,7 +129,8 @@ export function PlannerPage() {
                 ? "Still working: the free routing and weather servers are slow right now…"
                 : "Finding routes and checking the forecast along each one…")}
             {data &&
-              `${data.routes.length} routes found. Recommended: route ${data.recommended_route_id}.`}
+              `${data.routes.length} route${data.routes.length === 1 ? "" : "s"} found. ` +
+                `Recommended: route ${data.recommended_route_id}.`}
           </p>
           {plan.isFetching && <PlanSkeleton />}
           {!plan.isFetching && error && (
@@ -188,10 +183,10 @@ export function PlannerPage() {
                 initialHour={hour}
                 routes={data.routes}
                 selectedId={selected.id}
-                activeMile={activeMile}
-                hoverMile={hoverMile}
+                activeMile={checkpoint.activeMile}
+                hoverMile={checkpoint.hoverMile}
                 onSelectRoute={setRouteId}
-                onActivateCheckpoint={(mile) => setActive(mile === null ? null : { scope, mile })}
+                onActivateCheckpoint={checkpoint.activate}
               />
             </Suspense>
           </section>
@@ -221,15 +216,15 @@ export function PlannerPage() {
             </h2>
             <RiskProfile
               route={selected}
-              activeMile={activeMile}
-              onHover={(mile) => setHover(mile === null ? null : { scope, mile })}
-              onActivate={(mile) => setActive({ scope, mile })}
+              activeMile={checkpoint.activeMile}
+              onHover={checkpoint.hover}
+              onActivate={checkpoint.activate}
             />
             <CheckpointTable
               route={selected}
-              activeMile={activeMile}
-              onActivate={(mile) => setActive({ scope, mile })}
-              onHover={(mile) => setHover(mile === null ? null : { scope, mile })}
+              activeMile={checkpoint.activeMile}
+              onActivate={checkpoint.activate}
+              onHover={checkpoint.hover}
             />
           </section>
         )}

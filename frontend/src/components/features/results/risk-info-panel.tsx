@@ -3,7 +3,7 @@ import { ChevronDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { RISK_LABELS, RISK_LEVELS } from "@/constants/risk";
 
-// The brief's threshold table (ASSESSMENT.md), one row per level so it fits a narrow panel.
+// The brief's threshold table, one row per level so it fits a narrow panel.
 const THRESHOLDS = {
   low: ["< 25", "< 0.10", "< 0.5"],
   moderate: ["25–34", "0.10–0.25", "0.5–1.0"],

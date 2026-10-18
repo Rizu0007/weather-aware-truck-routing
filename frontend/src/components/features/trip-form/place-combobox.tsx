@@ -13,9 +13,8 @@ interface PlaceComboboxProps {
 }
 
 /**
- * Place search for origin/destination. Typing clears the chosen place, so a trip can
- * only be planned from a place picked from the suggestions (it carries coordinates).
- * Parents remount it with a new `key` to load a different value.
+ * Place search. Typing clears the chosen place, so trips only use picked places (with
+ * coordinates). Remount with a new `key` to load a different value.
  */
 export function PlaceCombobox({ control, value, onChange, disabled }: PlaceComboboxProps) {
   const [text, setText] = useState(value?.label ?? "");

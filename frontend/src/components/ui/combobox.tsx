@@ -24,9 +24,8 @@ interface ComboboxProps<T> {
 }
 
 /**
- * Editable combobox with a listbox popup, following the WAI-ARIA APG pattern:
- * focus stays in the input and aria-activedescendant points at the highlighted option.
- * Options come from the caller, so it works with server-side search.
+ * WAI-ARIA APG combobox: focus stays in the input, aria-activedescendant marks the
+ * highlighted option. Options come from the caller, so server-side search works.
  */
 export function Combobox<T>({
   control,

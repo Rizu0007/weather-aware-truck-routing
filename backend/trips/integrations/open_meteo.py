@@ -133,7 +133,9 @@ def _scaled(value: float | None, factor: float) -> float | None:
     return None if value is None else value * factor
 
 
-def _rain_total(rain, showers, rain_factor: float, showers_factor: float) -> float | None:
+def _rain_total(
+    rain: float | None, showers: float | None, rain_factor: float, showers_factor: float
+) -> float | None:
     """Open-Meteo splits rain into large-scale rain and convective showers."""
     if rain is None and showers is None:
         return None

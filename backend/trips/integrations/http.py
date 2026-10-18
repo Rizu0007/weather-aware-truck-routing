@@ -1,13 +1,11 @@
-"""GET JSON from a provider with timeouts and retries; failures become ProviderError.
-
-Error bodies differ per provider, so they are logged, not parsed.
-"""
+"""GET JSON from a provider with timeouts and retries. Error bodies are logged, not parsed."""
 
 import logging
 import re
 import time
 
 import requests
+from requests.adapters import HTTPAdapter
 
 from trips.exceptions import ProviderBusyError, ProviderError
 
@@ -29,7 +27,7 @@ _API_KEY_PARAM = re.compile(r"(apikey=)[^&\s]+", re.IGNORECASE)
 # Shared so keep-alive connections are reused: fewer handshakes, fewer stalls.
 # Safe across threads for plain GETs (no cookies or auth state are kept).
 _session = requests.Session()
-_session.mount("https://", requests.adapters.HTTPAdapter(pool_maxsize=16))
+_session.mount("https://", HTTPAdapter(pool_maxsize=16))
 _session.headers["User-Agent"] = USER_AGENT
 
 

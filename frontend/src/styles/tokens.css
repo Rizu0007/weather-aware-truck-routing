@@ -1,8 +1,5 @@
-/*
- * Design tokens (PLAN.md §7.3, palette D). Components use the Tailwind names
- * mapped in index.css, never these hex values directly.
- * Contrast pairs are checked by tokens.test.ts.
- */
+/* Design tokens. Components use the Tailwind names from index.css, never these hex values;
+   tokens.test.ts checks the WCAG contrast pairs. */
 :root {
   color-scheme: dark;
 

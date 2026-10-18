@@ -54,7 +54,7 @@ def test_network_failure_after_max_attempts():
 @responses.activate
 @pytest.mark.parametrize("status", [400, 404, 414])
 def test_client_errors_are_not_retried(status):
-    # 414 comes back with an empty body (API_NOTES.md, Open-Meteo errors).
+    # Open-Meteo answers an over-long URL with a bare 414.
     responses.get(URL, status=status, body="")
 
     with pytest.raises(ProviderError) as info:
