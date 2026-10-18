@@ -52,6 +52,7 @@ describe("captured API responses match src/types/api.ts", () => {
     expect(Object.keys(plan).sort()).toEqual(
       [
         "departure",
+        "departure_advice",
         "interval_mi",
         "load_lb",
         "recommendation",
@@ -69,6 +70,8 @@ describe("captured API responses match src/types/api.ts", () => {
       expect(Object.keys(route).sort()).toEqual(ROUTE_KEYS);
       expect(route.geometry.every(isLonLat)).toBe(true);
       expect(RISK_LEVELS).toContain(route.summary.max_level);
+      expect(["A", "B", "C", "D", "F"]).toContain(route.summary.grade);
+      expect(route.summary.safety_score).toBeGreaterThanOrEqual(0);
       expect(Object.keys(route.summary.miles_by_level).sort()).toEqual([...RISK_LEVELS].sort());
       for (const segment of route.segments) {
         expect(RISK_LEVELS).toContain(segment.level);

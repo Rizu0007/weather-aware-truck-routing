@@ -14,6 +14,9 @@ weather heatmap.
   ("Fewest No Travel miles: 0.0 mi vs 50.0 mi on route A").
 - **Weather every 10, 25 or 50 miles** at the truck's estimated arrival time at each checkpoint.
 - **Risk per checkpoint** from the wind / rain / snow thresholds and the load rules.
+- **Safety grade** per route: a 0–100 score and A–F grade, so routes compare at a glance.
+- **Best time to leave**: if leaving within the next 24 h avoids High-or-worse weather, the plan
+  says so ("Safer to leave 5 h later") and replans with one click.
 - **Map**: routes coloured by risk, checkpoint popups (ETA, wind, rain, snow, reason), click a route
   to select it.
 - **Corridor heatmap** with a 0–48 h slider and playback; scrubbing never calls the server.
@@ -36,7 +39,13 @@ weather heatmap.
    half-way to its neighbours, so risk miles add up to the route length.
 5. **Ranking.** Fewest No Travel miles, then Severe, then High, then the mile-weighted average risk
    (Low 0 … No Travel 4), then travel time. Differences under 0.1 mi or 0.01 risk count as ties.
-6. **Heatmap.** A grid of up to 120 cells 50 km either side of the routes, 49 hourly risk levels each,
+6. **Safety grade.** The worst level on the route sets the band, as it leads the ranking: any No
+   Travel miles is F (0–59), Severe D (60–69), High C (70–79), otherwise A or B (80–100). The share of
+   the route at that level sets the score within the band.
+7. **Later departures.** The forecast is fetched 24 h longer, and each hourly departure is re-scored
+   from it, with no extra requests. The earliest departure with the fewest No Travel, Severe and High
+   miles is suggested if it beats the planned one; less Moderate or a shorter drive alone isn't.
+8. **Heatmap.** A grid of up to 120 cells 50 km either side of the routes, 49 hourly risk levels each,
    loaded once; the slider only restyles the map.
 
 ### Assumptions (where the brief left room)

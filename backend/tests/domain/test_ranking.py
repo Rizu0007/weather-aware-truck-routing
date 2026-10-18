@@ -1,6 +1,6 @@
 import pytest
 
-from trips.domain.ranking import Candidate, rank, summarize
+from trips.domain.ranking import Candidate, rank, safer_than, summarize
 from trips.domain.risk import RiskLevel as L
 
 HOUR = 3600
@@ -112,3 +112,12 @@ def test_single_route():
 def test_rank_needs_candidates():
     with pytest.raises(ValueError):
         rank([])
+
+
+def test_safer_than_compares_high_or_worse_miles_only():
+    assert safer_than(route("A", low=100), route("B", low=90, severe=10)) == (
+        "Fewest Severe miles: 0.0 mi vs 10.0 mi"
+    )
+    # Fewer Moderate miles or a shorter drive is not "safer".
+    assert safer_than(route("A", hours=3, low=100), route("B", hours=4, moderate=100)) is None
+    assert safer_than(route("A", low=90, high=10), route("B", low=100)) is None

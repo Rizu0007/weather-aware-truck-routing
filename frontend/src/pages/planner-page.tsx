@@ -4,6 +4,7 @@ import { ApiError } from "@/api/client";
 import type { MapHandle } from "@/components/features/map/map-view";
 import { HeatmapControls } from "@/components/features/heatmap/heatmap-controls";
 import { CheckpointTable } from "@/components/features/results/checkpoint-table";
+import { DepartureAdvice } from "@/components/features/results/departure-advice";
 import { PlanError } from "@/components/features/results/plan-error";
 import { PlanSkeleton } from "@/components/features/results/plan-skeleton";
 import { PlanWarnings } from "@/components/features/results/plan-warnings";
@@ -69,6 +70,10 @@ export function PlannerPage() {
     focusResults.current = true;
     setEditing(false);
     setTrip(next);
+  }
+
+  function planWithDeparture(departure: string) {
+    if (trip) planTrip({ ...trip, departure });
   }
 
   // The submit button disappears with the form, so focus falls to the page; give it to
@@ -138,12 +143,13 @@ export function PlannerPage() {
               error={error}
               errorAt={plan.errorUpdatedAt}
               onRetry={() => void plan.refetch()}
-              onUseDeparture={(departure) => trip && planTrip({ ...trip, departure })}
+              onUseDeparture={planWithDeparture}
             />
           )}
           {data && selected && (
             <>
               <Recommendation plan={data} />
+              <DepartureAdvice plan={data} onUseDeparture={planWithDeparture} />
               <PlanWarnings warnings={data.warnings} />
               <RouteCardList
                 routes={data.routes}

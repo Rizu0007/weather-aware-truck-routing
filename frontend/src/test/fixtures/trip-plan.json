@@ -10,6 +10,7 @@
    "A"
   ]
  },
+ "departure_advice": null,
  "warnings": [
   "Only 2 distinct routes found for this corridor: other roads were near-duplicates or long detours."
  ],
@@ -30,7 +31,9 @@
      "no_travel": 0.0
     },
     "avg_risk": 0.0,
-    "max_level": "low"
+    "max_level": "low",
+    "safety_score": 100,
+    "grade": "A"
    },
    "geometry": [
     [
@@ -2286,7 +2289,9 @@
      "no_travel": 50.0
     },
     "avg_risk": 0.84,
-    "max_level": "no_travel"
+    "max_level": "no_travel",
+    "safety_score": 47,
+    "grade": "F"
    },
    "geometry": [
     [

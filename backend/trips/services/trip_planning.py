@@ -6,16 +6,28 @@ from datetime import datetime, timedelta
 
 from trips.domain.checkpoints import Checkpoint, TruckTimeline, build_checkpoints
 from trips.domain.geo import Coord, simplify, slice_line
-from trips.domain.ranking import Candidate, Ranking, RiskSummary, rank, summarize
+from trips.domain.ranking import (
+    Candidate,
+    Ranking,
+    RiskSummary,
+    rank,
+    safer_than,
+    sort_key,
+    summarize,
+)
 from trips.domain.risk import Assessment, RiskLevel, assess
+from trips.domain.safety_grade import SafetyGrade, grade
 from trips.integrations import open_meteo
-from trips.services.forecast_window import check_forecast_horizon
+from trips.integrations.open_meteo import HourlySeries
+from trips.services.forecast_window import check_forecast_horizon, latest_departure
 from trips.services.route_options import RouteOption, find_route_options
 
 TRUCK_MAX_SPEED_MPH = 65
 Weather = tuple[float | None, float | None, float | None]  # wind mph, rain and snow in/hr
 # ~50 m: invisible at route zoom, shrinks the geometry several-fold.
 SIMPLIFY_TOLERANCE_DEG = 0.0005
+# How much later a safer departure is looked for, in whole hours.
+LATER_DEPARTURE_HOURS = 24
 
 
 @dataclass(frozen=True)
@@ -42,9 +54,19 @@ class PlannedRoute:
     duration_s: float
     arrival: datetime
     summary: RiskSummary
+    grade: SafetyGrade
     geometry: list[Coord]
     segments: list[RiskSegment]
     checkpoints: list[CheckpointRisk]
+
+
+@dataclass(frozen=True)
+class DepartureAdvice:
+    """A later departure with fewer High-or-worse miles than the planned one."""
+
+    departure: datetime
+    route_id: str
+    reason: str
 
 
 @dataclass(frozen=True)
@@ -54,6 +76,7 @@ class TripPlan:
     interval_mi: int
     routes: list[PlannedRoute]
     ranking: Ranking
+    departure_advice: DepartureAdvice | None
     warnings: list[str]
 
 
@@ -70,14 +93,20 @@ def plan_trip(
     longest = timedelta(seconds=max(t.total_seconds for t in timelines))
     check_forecast_horizon(departure, longest)
 
+    later_hours = min(
+        LATER_DEPARTURE_HOURS, max(0, (latest_departure(longest) - departure) // timedelta(hours=1))
+    )
     checkpoints = [build_checkpoints(t, departure, interval_mi) for t in timelines]
-    weather = _weather_by_checkpoint(checkpoints, departure, longest)
+    series = _series_by_checkpoint(checkpoints, departure, longest, later_hours)
     routes = [
         _planned_route(
             option,
             timeline,
             departure,
-            [_assess_checkpoint(c, weather[c], load_lb) for c in route_checkpoints],
+            [
+                _assess_checkpoint(c, _weather_at(series[c], c.eta), load_lb)
+                for c in route_checkpoints
+            ],
         )
         for option, timeline, route_checkpoints in zip(
             found.options, timelines, checkpoints, strict=True
@@ -101,25 +130,79 @@ def plan_trip(
         interval_mi=interval_mi,
         routes=[by_id[route_id] for route_id in ranking.order],
         ranking=ranking,
+        departure_advice=_safer_departure(routes, series, departure, load_lb, later_hours),
         warnings=warnings,
     )
 
 
-def _weather_by_checkpoint(
-    checkpoints: list[list[Checkpoint]], departure: datetime, longest_trip: timedelta
-) -> dict[Checkpoint, Weather]:
-    """(wind, rain, snow) at the forecast hour nearest each checkpoint's ETA."""
+def _series_by_checkpoint(
+    checkpoints: list[list[Checkpoint]],
+    departure: datetime,
+    longest_trip: timedelta,
+    later_hours: int,
+) -> dict[Checkpoint, HourlySeries]:
+    """Each checkpoint's forecast, long enough for the trip to leave up to `later_hours` later."""
     flat = [c for route in checkpoints for c in route]
     # The series starts at the departure's hour (floored in UTC); +2 because the
     # nearest hour can round up past the arrival hour.
-    hours = math.ceil(longest_trip / timedelta(hours=1)) + 2
+    hours = math.ceil(longest_trip / timedelta(hours=1)) + 2 + later_hours
     series = open_meteo.hourly([c.coord for c in flat], departure, hours)
+    return dict(zip(flat, series, strict=True))
 
-    weather = {}
-    for checkpoint, s in zip(flat, series, strict=True):
-        i = round((checkpoint.eta - s.start) / timedelta(hours=1))
-        weather[checkpoint] = (s.wind_mph[i], s.rain_in_hr[i], s.snow_in_hr[i])
-    return weather
+
+def _weather_at(series: HourlySeries, moment: datetime) -> Weather:
+    """(wind, rain, snow) at the forecast hour nearest `moment`."""
+    i = round((moment - series.start) / timedelta(hours=1))
+    return series.wind_mph[i], series.rain_in_hr[i], series.snow_in_hr[i]
+
+
+def _safer_departure(
+    routes: list[PlannedRoute],
+    series: dict[Checkpoint, HourlySeries],
+    departure: datetime,
+    load_lb: int,
+    later_hours: int,
+) -> DepartureAdvice | None:
+    """The safest of the next `later_hours` hourly departures, earliest on a tie.
+
+    Suggested only if it has fewer High-or-worse miles than the planned departure.
+    """
+    planned = _best_route(routes, series, timedelta(0), load_lb)
+    advice, safest = None, planned
+    for hours in range(1, later_hours + 1):
+        delay = timedelta(hours=hours)
+        candidate = _best_route(routes, series, delay, load_lb)
+        if safer_than(candidate, safest):
+            reason = safer_than(candidate, planned)
+            advice = DepartureAdvice(
+                departure + delay, candidate.route_id, f"{reason} at the planned time."
+            )
+            safest = candidate
+    return advice
+
+
+def _best_route(
+    routes: list[PlannedRoute],
+    series: dict[Checkpoint, HourlySeries],
+    delay: timedelta,
+    load_lb: int,
+) -> Candidate:
+    """The route that would be recommended if the trip left `delay` later."""
+    candidates = []
+    for route in routes:
+        levels = [
+            (
+                r.checkpoint.miles_covered,
+                _assess_checkpoint(
+                    r.checkpoint,
+                    _weather_at(series[r.checkpoint], r.checkpoint.eta + delay),
+                    load_lb,
+                ).assessment.level,
+            )
+            for r in route.checkpoints
+        ]
+        candidates.append(Candidate(route.option.id, summarize(levels), route.duration_s))
+    return min(candidates, key=sort_key)
 
 
 def _assess_checkpoint(checkpoint: Checkpoint, weather: Weather, load_lb: int) -> CheckpointRisk:
@@ -133,12 +216,14 @@ def _assess_checkpoint(checkpoint: Checkpoint, weather: Weather, load_lb: int) -
 def _planned_route(
     option: RouteOption, timeline: TruckTimeline, departure: datetime, risks: list[CheckpointRisk]
 ) -> PlannedRoute:
+    summary = summarize([(r.checkpoint.miles_covered, r.assessment.level) for r in risks])
     return PlannedRoute(
         option=option,
         distance_mi=timeline.total_miles,
         duration_s=timeline.total_seconds,
         arrival=departure + timedelta(seconds=timeline.total_seconds),
-        summary=summarize([(r.checkpoint.miles_covered, r.assessment.level) for r in risks]),
+        summary=summary,
+        grade=grade(summary),
         geometry=simplify(timeline.coords, SIMPLIFY_TOLERANCE_DEG),
         segments=_risk_segments(timeline, risks),
         checkpoints=risks,

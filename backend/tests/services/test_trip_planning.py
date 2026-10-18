@@ -130,8 +130,8 @@ def test_requests_one_window_covering_the_longest_trip():
     [weather_call] = [c for c in responses.calls if "open-meteo" in c.request.url]
     params = weather_call.request.params
     assert params["start_hour"] == start.strftime("%Y-%m-%dT%H:00")
-    # Longest route is ~5.5 h: ceil + 2 = 8 hours, so end_hour is start + 7 h.
-    assert params["end_hour"] == (start + timedelta(hours=7)).strftime("%Y-%m-%dT%H:00")
+    # Longest route is ~5.5 h: ceil + 2 = 8 hours, plus 24 for later departures.
+    assert params["end_hour"] == (start + timedelta(hours=31)).strftime("%Y-%m-%dT%H:00")
 
 
 @responses.activate
@@ -184,3 +184,58 @@ def test_departure_beyond_the_forecast_horizon_is_rejected():
 
     assert "latest_departure" in info.value.extra
     assert not [c for c in responses.calls if "open-meteo" in c.request.url]
+
+
+def storm_everywhere_until(hour_from_departure):
+    """Wind of 50 mph on every road for the first hours after departure, then calm."""
+
+    def weather(lon, lat, hour):
+        if hour < hour_from_departure:
+            return {"wind": 50.0, "rain": 0.0, "showers": 0.0, "snow": 0.0}
+        return calm(lon, lat, hour)
+
+    return weather
+
+
+@responses.activate
+def test_suggests_the_earliest_later_departure_that_misses_the_storm():
+    mock_two_routes(storm_everywhere_until(hour_from_departure=10))
+    start = departure()
+
+    result = plan(departure=start)
+
+    advice = result.departure_advice
+    # The series starts at the floored hour; the trip must leave after hour 10 to miss it all.
+    assert advice.departure == start + timedelta(hours=10)
+    assert advice.reason.startswith("Fewest No Travel miles: 0.0 mi vs ")
+    assert advice.reason.endswith(" at the planned time.")
+
+
+@responses.activate
+def test_no_advice_when_the_planned_departure_is_already_calm():
+    mock_two_routes()
+
+    assert plan().departure_advice is None
+
+
+@responses.activate
+def test_no_advice_when_the_forecast_ends_before_any_later_departure():
+    mock_two_routes(storm_everywhere_until(hour_from_departure=10))
+    last_hour = departure(15 * 24 - 6 - 48 - 1)
+
+    result = plan(departure=last_hour)
+
+    assert result.departure_advice is None
+    [weather_call] = [c for c in responses.calls if "open-meteo" in c.request.url]
+    assert weather_call.request.params["end_hour"] <= (last_hour + timedelta(hours=8)).strftime(
+        "%Y-%m-%dT%H:00"
+    )
+
+
+@responses.activate
+def test_routes_carry_a_safety_grade():
+    mock_two_routes(storm_on_i45(wind_mph=50))
+
+    grades = {r.option.id: r.grade.letter for r in plan().routes}
+
+    assert grades == {"A": "F", "B": "A"}

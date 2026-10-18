@@ -51,6 +51,7 @@ def test_returns_ranked_routes_in_the_documented_shape(client):
     assert data["recommendation"]["ranking"] == ["A", "B"]
     assert data["interval_mi"] == 25
     assert len(data["warnings"]) == 1
+    assert data["departure_advice"] is None  # calm all day: nothing to wait for
 
     route = data["routes"][0]
     assert set(route) == {
@@ -61,6 +62,7 @@ def test_returns_ranked_routes_in_the_documented_shape(client):
         "low": route["distance_mi"], "moderate": 0, "high": 0, "severe": 0, "no_travel": 0,
     }  # fmt: skip
     assert route["summary"]["max_level"] == "low"
+    assert (route["summary"]["safety_score"], route["summary"]["grade"]) == (100, "A")
     assert data["routes"][1]["via_town"] == "Franklin, Texas"
 
     checkpoint = route["checkpoints"][1]

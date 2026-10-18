@@ -170,7 +170,14 @@ describe("PlannerPage: results", () => {
     );
     expect(routes.map((radio) => radio.getAttribute("value"))).toEqual(["B", "A"]);
     expect(screen.getByRole("radio", { name: /Route B/ })).toBeChecked();
-    expect(screen.getByRole("radio", { name: /Route A/ })).toHaveAccessibleName(/Worst: No Travel/);
+    expect(screen.getByRole("radio", { name: /Route A/ })).toHaveAccessibleName(
+      /Safety grade F, score 47 of 100/,
+    );
+    expect(screen.getByRole("radio", { name: /Route B/ })).toHaveAccessibleName(
+      /Safety grade A, score 100 of 100/,
+    );
+    // The captured plan is already the safest it can be, so no later departure is offered.
+    expect(screen.queryByText(/Safer to leave/)).not.toBeInTheDocument();
     expect(screen.getByText(/Only 2 distinct routes found/)).toBeInTheDocument();
   });
 
@@ -187,6 +194,28 @@ describe("PlannerPage: results", () => {
     expect(within(table).getAllByText(/Wind 50 mph with a 35,000 lb load/).length).toBeGreaterThan(
       0,
     );
+  });
+});
+
+describe("PlannerPage: leaving later", () => {
+  it("offers a safer later departure and plans it in one click", async () => {
+    const later = new Date(Date.parse(tripPlan.departure) + 5 * 3_600_000).toISOString();
+    const { router } = renderPlanner(SHARED, {
+      "/api/trip-plans": {
+        ...tripPlan,
+        departure_advice: {
+          departure: later,
+          route_id: "A",
+          reason: "Fewest No Travel miles: 0.0 mi vs 50.0 mi at the planned time.",
+        },
+      },
+    });
+
+    const advice = (await screen.findByText("Safer to leave 5 h later")).closest("[role=status]")!;
+    expect(advice).toHaveTextContent("On route A. Fewest No Travel miles: 0.0 mi vs 50.0 mi");
+    await userEvent.click(within(advice as HTMLElement).getByRole("button", { name: /Leave/ }));
+
+    expect(new URLSearchParams(router.state.location.search).get("depart")).toBe(later);
   });
 });
 

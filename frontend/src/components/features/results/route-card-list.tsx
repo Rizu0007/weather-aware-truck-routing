@@ -1,9 +1,17 @@
 import { RiskStrip } from "@/components/features/results/risk-strip";
 import { Badge } from "@/components/ui/badge";
-import { RISK_LABELS } from "@/constants/risk";
-import type { PlannedRoute } from "@/types/api";
+import type { BadgeVariant } from "@/components/ui/badge";
+import type { PlannedRoute, SafetyGrade } from "@/types/api";
 import { cn } from "@/utils/cn";
 import { formatDateTime, formatDuration, formatMiles } from "@/utils/format";
+
+const GRADE_BADGE: Record<SafetyGrade, BadgeVariant> = {
+  A: "low",
+  B: "moderate",
+  C: "high",
+  D: "severe",
+  F: "no_travel",
+};
 
 interface RouteCardListProps {
   routes: PlannedRoute[];
@@ -59,8 +67,13 @@ function RouteCard({ route, recommended, selected, onSelect }: RouteCardProps) {
         <span className="font-semibold">Route {route.id}</span>
         {route.via_town && <Badge variant="outline">via {route.via_town}</Badge>}
         {recommended && <Badge variant="primary">Recommended</Badge>}
-        <Badge variant={summary.max_level} className="ml-auto">
-          Worst: {RISK_LABELS[summary.max_level]}
+        <Badge variant={GRADE_BADGE[summary.grade]} className="ml-auto">
+          <span aria-hidden="true">
+            Safety {summary.grade} · {summary.safety_score}
+          </span>
+          <span className="sr-only">
+            Safety grade {summary.grade}, score {summary.safety_score} of 100
+          </span>
         </Badge>
       </span>
       <span className="grid grid-cols-3 gap-2 text-sm tabular-nums">

@@ -77,6 +77,8 @@ CRITERIA = (
         "Shortest travel time", lambda c: round(c.duration_s), lambda c: _hours(c.duration_s)
     ),
 )
+# The miles at High and worse: what a later departure must improve to be worth suggesting.
+SAFETY_CRITERIA = CRITERIA[:3]
 
 
 def sort_key(candidate: Candidate) -> tuple:
@@ -93,11 +95,20 @@ def rank(candidates: list[Candidate]) -> Ranking:
         return Ranking(order, "Only route found.")
 
     best, runner_up = ordered[0], ordered[1]
-    for criterion in CRITERIA:
-        if criterion.value(best) != criterion.value(runner_up):
-            reason = (
-                f"{criterion.name}: {criterion.show(best)} "
-                f"vs {criterion.show(runner_up)} on route {runner_up.route_id}."
-            )
-            return Ranking(order, reason)
+    if difference := _difference(best, runner_up, CRITERIA):
+        return Ranking(order, f"{difference} on route {runner_up.route_id}.")
     return Ranking(order, f"Tied with route {runner_up.route_id} on every criterion.")
+
+
+def safer_than(candidate: Candidate, other: Candidate) -> str | None:
+    """Why `candidate` has fewer No Travel, Severe or High miles than `other`; None if it hasn't."""
+    if [c.value(candidate) for c in SAFETY_CRITERIA] < [c.value(other) for c in SAFETY_CRITERIA]:
+        return _difference(candidate, other, SAFETY_CRITERIA)
+    return None
+
+
+def _difference(a: Candidate, b: Candidate, criteria: tuple[_Criterion, ...]) -> str | None:
+    for criterion in criteria:
+        if criterion.value(a) != criterion.value(b):
+            return f"{criterion.name}: {criterion.show(a)} vs {criterion.show(b)}"
+    return None

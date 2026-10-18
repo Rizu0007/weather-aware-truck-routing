@@ -77,6 +77,21 @@ export function RiskInfoPanel() {
             <li>Shortest travel time</li>
           </ol>
         </div>
+        <div>
+          <p className="font-medium">Safety grade</p>
+          <p className="mt-1 text-muted-foreground">
+            The worst level on the route sets the grade: any No Travel miles is F (0–59), Severe D
+            (60–69), High C (70–79), otherwise A or B (80–100). Within a grade, the more of the
+            route at that level, the lower the score.
+          </p>
+        </div>
+        <div>
+          <p className="font-medium">Leaving later</p>
+          <p className="mt-1 text-muted-foreground">
+            Each of the next 24 hourly departures is checked against the same forecast. If one has
+            fewer No Travel, Severe or High miles, the earliest of the safest is suggested.
+          </p>
+        </div>
         <p className="text-xs text-muted-foreground">
           Weather is read at each checkpoint for the hour the truck gets there (sustained wind, not
           gusts). Each checkpoint stands for the road half-way to its neighbours. Drive times are

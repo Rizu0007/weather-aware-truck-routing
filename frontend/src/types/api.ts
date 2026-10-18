@@ -35,6 +35,18 @@ export interface RouteSummary {
   /** Mile-weighted, 0 (all Low) to 4 (all No Travel). */
   avg_risk: number;
   max_level: RiskLevel;
+  /** 0-100; the worst level sets the band (F, D, C, else A/B). */
+  safety_score: number;
+  grade: SafetyGrade;
+}
+
+export type SafetyGrade = "A" | "B" | "C" | "D" | "F";
+
+/** A later departure with fewer High-or-worse miles than the planned one. */
+export interface DepartureAdvice {
+  departure: string;
+  route_id: string;
+  reason: string;
 }
 
 export interface RiskSegment {
@@ -61,6 +73,7 @@ export interface TripPlan {
   interval_mi: Interval;
   recommended_route_id: string;
   recommendation: { reason: string; ranking: string[] };
+  departure_advice: DepartureAdvice | null;
   warnings: string[];
   /** Best first. */
   routes: PlannedRoute[];

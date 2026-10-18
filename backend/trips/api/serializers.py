@@ -130,6 +130,8 @@ class RouteOutputSerializer(serializers.BaseSerializer):
                 },
                 "avg_risk": round(summary.avg_risk, 2),
                 "max_level": _level_key(summary.max_level),
+                "safety_score": route.grade.score,
+                "grade": route.grade.letter,
             },
             "geometry": [list(c) for c in route.geometry],
             "segments": [
@@ -142,12 +144,19 @@ class RouteOutputSerializer(serializers.BaseSerializer):
 
 class TripPlanOutputSerializer(serializers.BaseSerializer):
     def to_representation(self, plan: TripPlan) -> dict:
+        advice = plan.departure_advice
         return {
             "departure": _iso(plan.departure),
             "load_lb": plan.load_lb,
             "interval_mi": plan.interval_mi,
             "recommended_route_id": plan.ranking.order[0],
             "recommendation": {"reason": plan.ranking.reason, "ranking": plan.ranking.order},
+            "departure_advice": advice
+            and {
+                "departure": _iso(advice.departure),
+                "route_id": advice.route_id,
+                "reason": advice.reason,
+            },
             "warnings": plan.warnings,
             "routes": RouteOutputSerializer(plan.routes, many=True).data,
         }
