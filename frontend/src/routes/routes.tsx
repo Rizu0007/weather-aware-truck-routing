@@ -20,6 +20,8 @@ export function createRoutes(pages: RouteObject[] = pageRoutes): RouteObject[] {
       Component: AppLayout,
       // Last resort if the layout itself fails.
       ErrorBoundary: RouteErrorPage,
+      // Shown on a first visit while a lazy page's code loads (a few ms); matches the page background.
+      HydrateFallback: () => <div aria-busy="true" className="min-h-dvh bg-background" />,
       // Pathless child: page errors render inside the layout, so header and footer stay.
       children: [{ ErrorBoundary: RouteErrorPage, children: pages }],
     },
