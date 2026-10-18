@@ -1,6 +1,7 @@
+import type { ReactNode } from "react";
+
 import { RiskStrip } from "@/components/features/results/risk-strip";
-import { Badge } from "@/components/ui/badge";
-import type { BadgeVariant } from "@/components/ui/badge";
+import { Badge, type BadgeVariant } from "@/components/ui/badge";
 import type { PlannedRoute, SafetyGrade } from "@/types/api";
 import { cn } from "@/utils/cn";
 import { formatDateTime, formatDuration, formatMiles } from "@/utils/format";
@@ -67,19 +68,24 @@ function RouteCard({ route, recommended, selected, onSelect }: RouteCardProps) {
         <span className="font-semibold">Route {route.id}</span>
         {route.via_town && <Badge variant="outline">via {route.via_town}</Badge>}
         {recommended && <Badge variant="primary">Recommended</Badge>}
-        <Badge variant={GRADE_BADGE[summary.grade]} className="ml-auto">
-          <span aria-hidden="true">
-            Safety {summary.grade} · {summary.safety_score}
-          </span>
-          <span className="sr-only">
-            Safety grade {summary.grade}, score {summary.safety_score} of 100
-          </span>
-        </Badge>
       </span>
-      <span className="grid grid-cols-3 gap-2 text-sm tabular-nums">
+      <span className="grid grid-cols-2 gap-2 text-sm tabular-nums sm:grid-cols-4">
         <Stat label="Distance" value={formatMiles(route.distance_mi)} />
         <Stat label="Drive time" value={formatDuration(route.duration_s)} />
         <Stat label="Avg risk" value={`${summary.avg_risk.toFixed(2)} / 4`} />
+        <Stat
+          label="Safety"
+          value={
+            <Badge variant={GRADE_BADGE[summary.grade]}>
+              <span aria-hidden="true">
+                {summary.grade} · {summary.safety_score}
+              </span>
+              <span className="sr-only">
+                grade {summary.grade}, score {summary.safety_score} of 100
+              </span>
+            </Badge>
+          }
+        />
       </span>
       <span className="text-xs text-muted-foreground">Arrives {formatDateTime(route.arrival)}</span>
       <RiskStrip summary={summary} />
@@ -87,7 +93,7 @@ function RouteCard({ route, recommended, selected, onSelect }: RouteCardProps) {
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value }: { label: string; value: ReactNode }) {
   return (
     <span className="flex flex-col">
       <span className="text-xs text-muted-foreground">{label}</span>

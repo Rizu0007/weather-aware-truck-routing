@@ -171,10 +171,10 @@ describe("PlannerPage: results", () => {
     expect(routes.map((radio) => radio.getAttribute("value"))).toEqual(["B", "A"]);
     expect(screen.getByRole("radio", { name: /Route B/ })).toBeChecked();
     expect(screen.getByRole("radio", { name: /Route A/ })).toHaveAccessibleName(
-      /Safety grade F, score 47 of 100/,
+      /grade F, score 47 of 100/,
     );
     expect(screen.getByRole("radio", { name: /Route B/ })).toHaveAccessibleName(
-      /Safety grade A, score 100 of 100/,
+      /grade A, score 100 of 100/,
     );
     // The captured plan is already the safest it can be, so no later departure is offered.
     expect(screen.queryByText(/Safer to leave/)).not.toBeInTheDocument();

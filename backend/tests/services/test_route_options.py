@@ -180,8 +180,33 @@ def test_town_lookups_run_in_parallel(monkeypatch):
     started = time.monotonic()
     find_route_options(DALLAS, HOUSTON)
 
-    assert len([c for c in responses.calls if "/reverse" in c.request.url]) == 4
-    assert time.monotonic() - started < 0.9  # 4 x 0.3 s one after another would be 1.2 s
+    # 4 via-points and the 2 ends; one after another would take 6 x 0.3 s = 1.8 s.
+    assert len([c for c in responses.calls if "/reverse" in c.request.url]) == 6
+    assert time.monotonic() - started < 0.9
+
+
+@responses.activate
+def test_skips_towns_in_a_country_neither_end_is_in():
+    mock_osrm((200, native()), [(200, via_route())])
+    mock_towns(
+        [town("Nuevo Laredo", -96.48, 31.03, country="MX"), town("Cameron", -96.98, 30.85)],
+        ends=(town("Dallas", *DALLAS), town("Houston", *HOUSTON)),
+    )
+
+    result = find_route_options(DALLAS, HOUSTON)
+
+    assert [o.via_town for o in result.options] == [None, "Cameron, Texas"]
+    assert len(via_calls()) == 1  # Nuevo Laredo was never routed
+
+
+@responses.activate
+def test_any_town_is_fine_when_the_ends_have_no_town_nearby():
+    mock_osrm((200, native()), [(200, via_route())])
+    mock_towns([town("Nuevo Laredo", -96.48, 31.03, country="MX")])
+
+    result = find_route_options(DALLAS, HOUSTON)
+
+    assert [o.via_town for o in result.options] == [None, "Nuevo Laredo, Texas, MX"]
 
 
 @responses.activate

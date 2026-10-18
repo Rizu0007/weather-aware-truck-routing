@@ -11,7 +11,8 @@ weather heatmap.
 ## What it does
 
 - **Up to 3 routes** from a routing API, ranked best first, with a one-line reason
-  ("Fewest No Travel miles: 0.0 mi vs 50.0 mi on route A").
+  ("Fewest No Travel miles: 0.0 mi vs 50.0 mi on route A") and what the pick avoids ("Avoids rain
+  0.42 in/hr on route A at mile 220, Tue 2:23 AM").
 - **Weather every 10, 25 or 50 miles** at the truck's estimated arrival time at each checkpoint.
 - **Risk per checkpoint** from the wind / rain / snow thresholds and the load rules.
 - **Safety grade** per route: a 0–100 score and A–F grade, so routes compare at a glance.
@@ -29,7 +30,8 @@ weather heatmap.
 1. **Routes.** OSRM's public server usually returns only 1–2 routes. For the missing ones the backend
    forces a route through the **nearest town** to a point beside the direct line (towns sit on
    through-roads; raw offset points snap to dirt roads). A candidate is dropped if more than 80 % of
-   it overlaps a route already kept, or if it takes more than 1.5× the fastest. Corridors with one
+   it overlaps a route already kept, or if it takes more than 1.5× the fastest. Towns in a country
+   neither end is in are skipped (no detours through Mexico on a US trip). Corridors with one
    sensible road return fewer routes, with a warning.
 2. **Checkpoints and ETAs.** A checkpoint every N miles plus the destination. Drive time comes from
    OSRM's per-segment durations, scaled to its route total and capped at 65 mph.
@@ -64,7 +66,7 @@ weather heatmap.
 | Service | Limit we hit | What the app does |
 |---|---|---|
 | OSRM demo | 1–2 routes; ~1 request/s policy; occasional 10 s+ stalls | Town via-points (above); a 20 s budget for alternatives, then plan with what was found |
-| Photon | Results are global; occasional stalls | North America bounding box; town lookups in parallel, capped at 8 s |
+| Photon | Results are global; typos rank streets first ("Maimi" → Maimi Circle); occasional stalls | North America bounding box; towns before streets unless the query has a number; town lookups in parallel, capped at 8 s |
 | Open-Meteo | ~600 locations/min for all users; ~15 days ahead; slow on large batches | Batches of 200, 15-min cache, heatmap ≤ 120 cells, a 429 becomes "busy, retry in N s" |
 
 Repeat plans are served from the backend cache in ~0.1 s. The UI says "Still working…" after 10 s

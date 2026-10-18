@@ -128,8 +128,9 @@ export function selectionPaint(selectedId: string) {
   const pick = (selected: number, other: number) =>
     expression<number>(["case", isSelected(selectedId), selected, other]);
   return {
-    casing: { "line-width": pick(9, 5), "line-opacity": pick(1, 0.6) },
-    risk: { "line-width": pick(5, 2.5), "line-opacity": pick(1, 0.45) },
+    // Others stay clear enough that their risky stretches show without selecting them.
+    casing: { "line-width": pick(9, 6), "line-opacity": pick(1, 0.7) },
+    risk: { "line-width": pick(5, 3.5), "line-opacity": pick(1, 0.8) },
   };
 }
 

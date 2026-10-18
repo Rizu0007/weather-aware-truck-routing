@@ -25,6 +25,7 @@ class Place:
     label: str
     lon: float
     lat: float
+    country: str | None = None  # ISO code, e.g. "US"
 
     @property
     def coord(self) -> Coord:
@@ -41,6 +42,10 @@ def search(query: str, limit: int = 5) -> list[Place]:
 
     params = {"q": query, "limit": limit * 2, "lang": "en", "bbox": NORTH_AMERICA_BBOX}
     found = _places(get_json(PROVIDER, f"{settings.PHOTON_URL}/api/", params))
+    if not any(ch.isdigit() for ch in query):
+        # Towns before streets: a typo like "Maimi" matches "Maimi Circle" ahead of Miami.
+        # A query with a number is an address, so Photon's order stands.
+        found.sort(key=lambda item: item[0].get("osm_key") != "place")
     places: dict[str, Place] = {}
     for props, place in found:
         if props.get("type") not in AREA_TYPES:
@@ -73,7 +78,8 @@ def _places(body) -> list[tuple[dict, Place]]:
             props = feature["properties"]
             lon, lat = feature["geometry"]["coordinates"]
             if label := _label(props):
-                found.append((props, Place(label=label, lon=lon, lat=lat)))
+                place = Place(label=label, lon=lon, lat=lat, country=props.get("countrycode"))
+                found.append((props, place))
         return found
     except (KeyError, TypeError, ValueError) as exc:
         raise ProviderError(PROVIDER, extra={"reason": "unexpected response shape"}) from exc

@@ -2,12 +2,35 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { CheckpointTable } from "@/components/features/results/checkpoint-table";
+import { Recommendation } from "@/components/features/results/recommendation";
 import { RiskStrip } from "@/components/features/results/risk-strip";
 import tripPlan from "@/test/fixtures/trip-plan.json";
 import type { PlannedRoute, TripPlan } from "@/types/api";
+import { formatClock } from "@/utils/format";
 
 const PLAN = tripPlan as TripPlan;
 const ROUTE_A = PLAN.routes.find((route) => route.id === "A")!;
+
+describe("Recommendation", () => {
+  it("says what the recommended route avoids: the worst weather on another route", () => {
+    render(<Recommendation plan={PLAN} />);
+
+    const storm = ROUTE_A.checkpoints.find((c) => c.level === "no_travel")!;
+    expect(
+      screen.getByText(
+        `Avoids wind 50 mph with a 35,000 lb load on route A at mile ${Math.round(storm.mile)}, ` +
+          `${formatClock(storm.eta)}.`,
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("says nothing extra when no route is worse than the recommended one", () => {
+    const calm = { ...PLAN, routes: PLAN.routes.filter((route) => route.id === "B") };
+    render(<Recommendation plan={calm} />);
+
+    expect(screen.queryByText(/^Avoids/)).not.toBeInTheDocument();
+  });
+});
 
 describe("RiskStrip", () => {
   it("labels only the levels the route has, with their miles", () => {

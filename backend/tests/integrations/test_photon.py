@@ -98,3 +98,33 @@ def test_no_town_in_radius_is_none_and_cached():
     assert nearest_town((-121.35, 46.6), radius_km=20) is None
     assert nearest_town((-121.35, 46.6), radius_km=20) is None
     assert len(responses.calls) == 1
+
+
+def feature(name, osm_key, lon=-80.19, lat=25.77, **props):
+    return {
+        "type": "Feature",
+        "properties": {"name": name, "osm_key": osm_key, "type": "city", **props},
+        "geometry": {"type": "Point", "coordinates": [lon, lat]},
+    }
+
+
+@responses.activate
+def test_search_puts_towns_before_streets():
+    # Photon's real order for the typo "Maimi".
+    streets = [feature("Maimi Circle", "highway", city="Indian Wells", state="California")]
+    towns = [feature("Miami", "place", state="Florida")]
+    responses.get(SEARCH_URL, json={"type": "FeatureCollection", "features": streets + towns})
+
+    assert [p.label for p in search("Maimi")] == [
+        "Miami, Florida",
+        "Maimi Circle, Indian Wells, California",
+    ]
+
+
+@responses.activate
+def test_search_keeps_photons_order_for_an_address():
+    streets = [feature("Main Street", "highway", housenumber="12", city="Miami", state="Florida")]
+    towns = [feature("Main", "place", state="Maine")]
+    responses.get(SEARCH_URL, json={"type": "FeatureCollection", "features": streets + towns})
+
+    assert search("12 Main")[0].label.startswith("Main Street")

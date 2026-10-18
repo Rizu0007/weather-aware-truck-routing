@@ -87,7 +87,7 @@ def _via_town_routes(
     deadline = time.monotonic() + ALTERNATIVES_BUDGET_S
     fastest_s = min(route.duration_s for route in kept)
     footprints = [alternatives.footprint(route.coords) for route in kept]
-    towns, cut_short = _nearest_towns(
+    towns, countries, cut_short = _nearest_towns(
         origin, destination, timeout=ALTERNATIVES_BUDGET_S * TOWN_LOOKUP_SHARE
     )
 
@@ -97,6 +97,10 @@ def _via_town_routes(
         if len(kept) + len(added) >= TARGET_ROUTES:
             break
         if town is None or town.coord in tried:
+            continue
+        if countries and town.country not in countries:
+            # A detour into another country means two border crossings no driver would plan.
+            logger.info("Skipped %s: outside %s", town.label, "/".join(sorted(countries)))
             continue
         if time.monotonic() > deadline:
             logger.warning("Alternative routes ran out of time after %d found", len(added))
@@ -123,19 +127,30 @@ def _via_town_routes(
 
 def _nearest_towns(
     origin: Coord, destination: Coord, timeout: float
-) -> tuple[list[tuple[float, Place | None]], bool]:
-    """Town nearest each via-point, looked up in parallel. Failed or late lookups give None."""
+) -> tuple[list[tuple[float, Place | None]], set[str], bool]:
+    """Town nearest each via-point, and the countries of the trip's ends, looked up in parallel.
+
+    Failed or late lookups give None; an end with no town nearby adds no country.
+    """
     crow_km = haversine_mi(origin, destination) * KM_PER_MI
     radius_km = max(MIN_TOWN_RADIUS_KM, TOWN_RADIUS_SHARE * crow_km)
-    pool = ThreadPoolExecutor(max_workers=len(alternatives.VIA_OFFSETS))
+    pool = ThreadPoolExecutor(max_workers=len(alternatives.VIA_OFFSETS) + 2)
     futures = {
         offset: pool.submit(
             photon.nearest_town, alternatives.via_point(origin, destination, offset), radius_km
         )
         for offset in alternatives.VIA_OFFSETS
     }
-    wait(futures.values(), timeout=timeout)
+    ends = [
+        pool.submit(photon.nearest_town, end, MIN_TOWN_RADIUS_KM) for end in (origin, destination)
+    ]
+    wait([*futures.values(), *ends], timeout=timeout)
     pool.shutdown(wait=False, cancel_futures=True)  # don't wait for a stalled lookup
+    countries = {
+        town.country
+        for end in ends
+        if end.done() and end.exception() is None and (town := end.result()) and town.country
+    }
 
     towns: list[tuple[float, Place | None]] = []
     cut_short = False
@@ -146,4 +161,4 @@ def _nearest_towns(
             towns.append((offset, None))
         else:
             towns.append((offset, future.result()))
-    return towns, cut_short
+    return towns, countries, cut_short

@@ -53,9 +53,10 @@ def mock_osrm(direct, via_answers=()):
     responses.add_callback(responses.GET, OSRM_URL, callback=callback)
 
 
-def town(name, lon, lat):
+def town(name, lon, lat, country="US"):
     feature = copy.deepcopy(load_sample("photon_reverse_town")["features"][0])
     feature["properties"]["name"] = name
+    feature["properties"]["countrycode"] = country
     feature["geometry"]["coordinates"] = [lon, lat]
     return {"type": "FeatureCollection", "features": [feature]}
 
@@ -64,8 +65,10 @@ def no_town():
     return load_sample("photon_reverse_no_town")
 
 
-def mock_towns(answers, origin=DALLAS, destination=HOUSTON):
+def mock_towns(answers, origin=DALLAS, destination=HOUSTON, ends=(None, None)):
     """Answer each via-point's /reverse lookup: answers[i] is for VIA_OFFSETS[i].
+
+    `ends` answers the lookups at the origin and destination (default: no town).
 
     An answer is a body, a (status, body) pair, or a callable returning either.
 
@@ -75,6 +78,9 @@ def mock_towns(answers, origin=DALLAS, destination=HOUSTON):
     for offset, answer in zip(VIA_OFFSETS, answers, strict=False):
         lon, lat = via_point(origin, destination, offset)
         by_point[(_snap(lon), _snap(lat))] = answer
+    for (lon, lat), answer in zip((origin, destination), ends, strict=True):
+        if answer is not None:
+            by_point[(_snap(lon), _snap(lat))] = answer
 
     def callback(request):
         query = parse_qs(urlparse(request.url).query)
