@@ -3,6 +3,7 @@ const SOURCES = [
   { label: "OSRM", href: "https://project-osrm.org/", note: "routing" },
   { label: "Photon", href: "https://photon.komoot.io/", note: "places" },
   { label: "OpenFreeMap", href: "https://openfreemap.org/", note: "map tiles" },
+  { label: "OpenMapTiles", href: "https://openmaptiles.org/", note: "map schema" },
 ];
 
 /** Data credits: Open-Meteo's licence requires attribution; OSM data is in tiles, routes and places. */

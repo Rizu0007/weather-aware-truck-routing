@@ -1,0 +1,47 @@
+/* MapLibre's popup and controls are light by default; restyle them with our tokens. */
+.maplibregl-popup-content {
+  background: var(--surface-raised);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+  padding: 12px 14px;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: var(--surface-raised) !important;
+  border-bottom-color: var(--surface-raised) !important;
+}
+
+.maplibregl-popup-close-button {
+  color: var(--muted-foreground);
+  font-size: 18px;
+  padding: 0 6px;
+}
+
+.maplibregl-ctrl-group {
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.maplibregl-ctrl-group button + button {
+  border-top-color: var(--border);
+}
+
+.maplibregl-ctrl-group button .maplibregl-ctrl-icon {
+  filter: invert(0.9);
+}
+
+.maplibregl-ctrl-attrib {
+  background: rgb(13 26 46 / 0.8) !important;
+  color: var(--muted-foreground);
+}
+
+.maplibregl-ctrl-attrib a {
+  color: var(--foreground);
+}
+
+.maplibregl-cooperative-gesture-screen {
+  background: rgb(13 26 46 / 0.75);
+  color: var(--foreground);
+}

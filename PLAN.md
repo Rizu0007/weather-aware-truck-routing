@@ -223,9 +223,10 @@ Backend first (C0–C7), so the 40 % logic is tested before any UI exists.
 9. **Proxy timeout vs cold start:** Vercel's CDN now waits up to **120 s** for an external origin
    ([changelog](https://vercel.com/changelog/cdn-origin-timeout-increased-to-two-minutes)) **[frontend]**,
    longer than a Render cold start (~1 min) and our worst plan (~40 s). The waking state stays.
-10. **Dark basemap legibility [frontend]:** town and road labels are dimmer on `dark`; check in C12c,
-    and fall back to Option E (light) if labels are too hard to read.
-11. **MapLibre worker under Vite [frontend]:** documented (`?worker&url` import), untested; checked first in C12c.
+10. ~~Dark basemap legibility~~ **Resolved in C12c:** town and highway labels read clearly on `dark`
+    (screenshots in browser testing).
+11. ~~MapLibre worker under Vite~~ **Resolved in C12c:** `?worker&url` + `setWorkerUrl` works in dev and in
+    the production build. (A blank map turned out to be an invalid style expression, not the worker.)
 12. **Pinned-behind versions:** TS 6 and Django 5.2 are deliberate (C1–C3); ESLint moves to 10 with the Vite frontend **[frontend]**; revisit
     when typescript-eslint / plugins / pytest-django declare support for the newer versions.
 13. Public demo servers (OSRM, Photon) have no SLA; Photon's `osm_tag` is marked deprecated **[new]**.

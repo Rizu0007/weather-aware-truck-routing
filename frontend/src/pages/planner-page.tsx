@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/api/client";
 import { CheckpointTable } from "@/components/features/results/checkpoint-table";
@@ -11,6 +11,7 @@ import { TripForm } from "@/components/features/trip-form/trip-form";
 import { TripSummary } from "@/components/features/trip-form/trip-summary";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useBackendHealth } from "@/hooks/use-backend-health";
 import { useDelayedFlag } from "@/hooks/use-delayed-flag";
 import { useTripParams } from "@/hooks/use-trip-params";
@@ -20,6 +21,13 @@ import type { TripParams } from "@/utils/trip-params";
 import { serverFieldErrors } from "@/utils/validate-trip";
 
 const SLOW_PLAN_MS = 10_000;
+
+// MapLibre is the largest dependency: load it after the form, in its own chunk.
+const loadMap = () => import("@/components/features/map/map-view");
+const MapView = lazy(loadMap);
+
+/** A checkpoint mile that only applies to the plan and route it was chosen on. */
+type ScopedMile = { scope: string; mile: number } | null;
 
 function exampleTrip(): TripParams {
   return {
@@ -45,6 +53,16 @@ export function PlannerPage() {
   const showForm = !trip || editing || error?.kind === "validation";
   const data = plan.isFetching ? undefined : plan.data;
   const selected = data?.routes.find((route) => route.id === routeId) ?? data?.routes[0];
+  const scope = `${plan.dataUpdatedAt}:${selected?.id}`;
+  const [active, setActive] = useState<ScopedMile>(null);
+  const [hover, setHover] = useState<ScopedMile>(null);
+  const activeMile = active?.scope === scope ? active.mile : null;
+  const hoverMile = hover?.scope === scope ? hover.mile : null;
+
+  // Fetch the map code while the user fills in the form.
+  useEffect(() => {
+    if (backend === "ready") void loadMap();
+  }, [backend]);
 
   function planTrip(next: TripParams) {
     focusResults.current = true;
@@ -141,6 +159,24 @@ export function PlannerPage() {
           </div>
         )}
         {data && selected && (
+          <section aria-label="Map" className="h-[55svh] min-h-80 lg:h-[60vh]">
+            <Suspense
+              fallback={
+                <Skeleton className="flex h-full items-center justify-center rounded-card text-sm text-muted-foreground" />
+              }
+            >
+              <MapView
+                routes={data.routes}
+                selectedId={selected.id}
+                activeMile={activeMile}
+                hoverMile={hoverMile}
+                onSelectRoute={setRouteId}
+                onActivateCheckpoint={(mile) => setActive(mile === null ? null : { scope, mile })}
+              />
+            </Suspense>
+          </section>
+        )}
+        {data && selected && (
           <section aria-labelledby="checkpoints-heading" className="flex flex-col gap-3">
             <h2 id="checkpoints-heading" className="text-base font-semibold">
               Checkpoints on route {selected.id}
@@ -148,7 +184,12 @@ export function PlannerPage() {
                 weather at the truck's arrival time
               </span>
             </h2>
-            <CheckpointTable route={selected} />
+            <CheckpointTable
+              route={selected}
+              activeMile={activeMile}
+              onActivate={(mile) => setActive({ scope, mile })}
+              onHover={(mile) => setHover(mile === null ? null : { scope, mile })}
+            />
           </section>
         )}
       </div>

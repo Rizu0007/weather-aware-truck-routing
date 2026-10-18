@@ -4,10 +4,35 @@ import { createMemoryRouter } from "react-router";
 import { RouterProvider } from "react-router/dom";
 import { describe, expect, it, vi } from "vitest";
 
+import type { MapViewProps } from "@/components/features/map/map-view";
 import { createRoutes } from "@/routes/routes";
 import { createQueryWrapper, jsonResponse, mockFetch } from "@/test/api";
 import tripPlan from "@/test/fixtures/trip-plan.json";
 import { tripSearchParams, type TripParams } from "@/utils/trip-params";
+
+// MapLibre needs WebGL, which jsdom lacks; a stand-in shows what the map is given and
+// lets tests "click" it, so the map <-> table wiring is still tested.
+vi.mock("@/components/features/map/map-view", () => ({
+  default: (props: MapViewProps) => (
+    <div
+      data-testid="map"
+      data-selected={props.selectedId}
+      data-active={props.activeMile ?? ""}
+      data-hover={props.hoverMile ?? ""}
+    >
+      <button onClick={() => props.onSelectRoute("A")}>map: click route A</button>
+      <button
+        onClick={() =>
+          props.onActivateCheckpoint(
+            props.routes.find((r) => r.id === props.selectedId)!.checkpoints[2].mile,
+          )
+        }
+      >
+        map: click checkpoint 3
+      </button>
+    </div>
+  ),
+}));
 
 const TRIP: TripParams = {
   origin: { label: "Dallas, Texas", lat: 32.7767, lon: -96.797 },
@@ -219,5 +244,52 @@ describe("PlannerPage: errors", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Retry" }));
 
     expect(await screen.findByText("Take route B")).toBeInTheDocument();
+  });
+});
+
+describe("PlannerPage: map", () => {
+  it("shows the routes on the map, with the selected one highlighted", async () => {
+    renderPlanner(SHARED, { "/api/trip-plans": tripPlan });
+
+    const map = await screen.findByTestId("map");
+    expect(map).toHaveAttribute("data-selected", "B");
+  });
+
+  it("clicking a route on the map selects it, like its card", async () => {
+    const { router } = renderPlanner(SHARED, { "/api/trip-plans": tripPlan });
+
+    await userEvent.click(await screen.findByRole("button", { name: "map: click route A" }));
+
+    expect(screen.getByRole("radio", { name: /Route A/ })).toBeChecked();
+    expect(new URLSearchParams(router.state.location.search).get("route")).toBe("A");
+  });
+
+  it("clicking a checkpoint on the map highlights its table row", async () => {
+    renderPlanner(SHARED, { "/api/trip-plans": tripPlan });
+
+    await userEvent.click(await screen.findByRole("button", { name: "map: click checkpoint 3" }));
+
+    const rows = within(screen.getByRole("table")).getAllByRole("row").slice(1);
+    expect(rows[2]).toHaveAttribute("aria-current", "true");
+  });
+
+  it("table rows drive the map: hover enlarges the marker, the mile button opens its popup", async () => {
+    renderPlanner(SHARED, { "/api/trip-plans": tripPlan });
+    const row = (await screen.findAllByRole("row"))[2];
+
+    await userEvent.hover(row);
+    expect(screen.getByTestId("map")).toHaveAttribute("data-hover", "25");
+
+    await userEvent.click(screen.getByRole("button", { name: "Mile 25: show on map" }));
+    expect(screen.getByTestId("map")).toHaveAttribute("data-active", "25");
+  });
+
+  it("forgets the open checkpoint when another route is chosen", async () => {
+    renderPlanner(SHARED, { "/api/trip-plans": tripPlan });
+    await userEvent.click(await screen.findByRole("button", { name: "Mile 25: show on map" }));
+
+    await userEvent.click(screen.getByRole("radio", { name: /Route A/ }));
+
+    expect(screen.getByTestId("map")).toHaveAttribute("data-active", "");
   });
 });
