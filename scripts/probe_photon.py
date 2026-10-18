@@ -41,6 +41,18 @@ summarize(data)
 status, data, _ = call("photon_search_bbox", BASE, {"q": "Paris", "limit": 5, "lang": "en", "bbox": NORTH_AMERICA_BBOX})
 summarize(data)
 
+# Reverse lookup used to snap alternative-route via-points to a town on a through-road.
+REVERSE = "https://photon.komoot.io/reverse"
+TOWN_TAGS = [("osm_tag", "place:town"), ("osm_tag", "place:city")]
+# Offset via-point west of the Dallas-Houston line.
+status, data, _ = call("photon_reverse_town", REVERSE,
+                       [("lon", -96.93), ("lat", 31.0), ("radius", 50), ("limit", 1), *TOWN_TAGS])
+summarize(data)
+# Cascades offset point for Seattle-Portland: no town within the radius.
+status, data, _ = call("photon_reverse_no_town", REVERSE,
+                       [("lon", -121.35), ("lat", 46.6), ("radius", 20), ("limit", 1), *TOWN_TAGS])
+summarize(data)
+
 print("\n== Photon: failure cases ==")
 status, data, _ = call("photon_empty_result", BASE, {"q": "qwxzvbnmplkj", "limit": 5})
 summarize(data)

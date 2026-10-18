@@ -268,6 +268,7 @@ autocomplete and cache results.
 2. `layer=city` on `/reverse` returned villages (Bagdad, Wilhoit); `osm_tag=place:town` returned real towns
    (Chino Valley, Prescott Valley). Use `osm_tag`.
 3. `/reverse` with a radius can return **no features** (Seattle–Portland offsets inside ~28 km of the Cascades).
+   Samples: `photon_reverse_town.json` (Cameron, TX) and `photon_reverse_no_town.json`, added in C5 (2026-10-18).
 
 ---
 

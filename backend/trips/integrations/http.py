@@ -1,7 +1,8 @@
 """One way to call a third-party JSON API: timeouts, retries, and errors as ProviderError.
 
-Failures are mapped by status code only. Provider error bodies differ between
-services (see API_NOTES.md), so they are logged, never parsed.
+Failures are mapped by status code. Provider error bodies differ between
+services (see API_NOTES.md), so they are logged, not parsed here; a caller can
+`accept` a status when the provider documents a machine-readable error code.
 """
 
 import logging
@@ -20,11 +21,13 @@ BACKOFF_S = 0.5  # doubled after each failed attempt
 RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
 
 
-def get_json(provider: str, url: str, params: dict) -> dict | list:
+def get_json(
+    provider: str, url: str, params: dict | list, accept: frozenset[int] = frozenset({200})
+) -> dict | list:
     """GET `url` and return the decoded JSON body.
 
-    Network errors, 429 and 5xx are retried with exponential backoff. Any other
-    non-200 status, or a body that isn't JSON, raises ProviderError at once.
+    Network errors, 429 and 5xx are retried with exponential backoff. A status
+    outside `accept`, or a body that isn't JSON, raises ProviderError at once.
     """
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
@@ -35,7 +38,7 @@ def get_json(provider: str, url: str, params: dict) -> dict | list:
             failure = f"{type(exc).__name__}: {exc}"
             extra = {}
         else:
-            if response.status_code == 200:
+            if response.status_code in accept:
                 return _decode(provider, response)
             failure = f"HTTP {response.status_code}: {response.text[:200]!r}"
             extra = {"status": response.status_code}

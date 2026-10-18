@@ -33,6 +33,16 @@ backend/.venv/bin/pre-commit install   # runs Ruff on staged backend files befor
 
 CI (`.github/workflows/ci.yml`) runs the same lint, format and test steps on every push and PR.
 
+## Backend API
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/health` | `{"status": "ok"}` |
+| `GET /api/places?q=Hous` | Up to 5 North American places: `[{label, lat, lon}]` |
+
+Errors are always `{"message": str, "extra": {...}}`: 400 invalid input (field errors in
+`extra.fields`), 422 no route / beyond the forecast, 502 an external service failed.
+
 ## External APIs (all keyless)
 
 | Purpose | Provider |
