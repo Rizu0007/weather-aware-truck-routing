@@ -18,6 +18,7 @@ const mapCalls = { heatmapHours: [] as number[] };
 vi.mock("@/components/features/map/map-view", async () => {
   const { useImperativeHandle } = await import("react");
   return {
+    BasemapPreview: () => null,
     default: function MapStub(props: MapViewProps) {
       useImperativeHandle(props.ref, () => ({
         setHeatmapHour: (hour: number) => mapCalls.heatmapHours.push(hour),

@@ -50,6 +50,7 @@ function coveredHeight(panel: HTMLElement | null): number {
 // MapLibre is the largest dependency: load it after the form, in its own chunk.
 const loadMap = () => import("@/components/features/map/map-view");
 const MapView = lazy(loadMap);
+const BasemapPreview = lazy(() => loadMap().then((module) => ({ default: module.BasemapPreview })));
 
 function exampleTrip(): TripParams {
   return {
@@ -191,25 +192,42 @@ export function PlannerPage() {
           strip and timeline always show their effect on the map. */}
       <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-18 lg:h-[calc(100dvh-5.5rem)]">
         {!trip && (
-          <div className="flex flex-col items-start gap-4 rounded-card border border-dashed border-border p-6">
-            <h2 className="text-base font-semibold">How it works</h2>
-            <ol className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
-              {HOW_IT_WORKS.map(([title, text], index) => (
-                <li key={title} className="flex gap-3">
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
-                    {index + 1}
-                  </span>
-                  <span>
-                    <span className="block font-medium text-foreground">{title}</span>
-                    {text}
-                  </span>
-                </li>
-              ))}
-            </ol>
-            <Button variant="secondary" onClick={() => planTrip(exampleTrip())}>
-              Try Dallas → Houston
-            </Button>
-          </div>
+          <section
+            aria-labelledby="how-heading"
+            className="relative flex min-h-80 flex-col justify-end overflow-hidden rounded-card border border-border bg-surface lg:flex-1"
+          >
+            {/* The product's own map, so the first screen already looks like it. */}
+            <div className="absolute inset-0">
+              <Suspense fallback={null}>
+                <BasemapPreview />
+              </Suspense>
+            </div>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-linear-to-t from-background via-background/70 to-background/0"
+            />
+            <div className="relative flex flex-col items-start gap-4 p-6">
+              <h2 id="how-heading" className="text-base font-semibold">
+                How it works
+              </h2>
+              <ol className="grid gap-3 text-sm text-muted-foreground sm:grid-cols-3">
+                {HOW_IT_WORKS.map(([title, text], index) => (
+                  <li key={title} className="flex gap-3">
+                    <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-secondary text-xs font-semibold text-secondary-foreground">
+                      {index + 1}
+                    </span>
+                    <span>
+                      <span className="block font-medium text-foreground">{title}</span>
+                      {text}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+              <Button variant="secondary" onClick={() => planTrip(exampleTrip())}>
+                Try Dallas → Houston
+              </Button>
+            </div>
+          </section>
         )}
         {trip && plan.isFetching && (
           <Skeleton className="h-[55svh] min-h-80 rounded-card lg:h-auto lg:flex-1" />

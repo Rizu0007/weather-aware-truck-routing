@@ -40,7 +40,7 @@ import { RiskField } from "@/components/features/map/risk-field";
 import { WeatherFlow } from "@/components/features/map/weather-flow";
 import { formatDuration, formatMiles } from "@/utils/format";
 import { prefersReducedMotion } from "@/utils/motion";
-import type { Heatmap, PlannedRoute } from "@/types/api";
+import type { Heatmap, LonLat, PlannedRoute } from "@/types/api";
 
 // Vite needs the worker's URL spelled out (MapLibre docs, "Vite").
 setWorkerUrl(workerUrl);
@@ -437,6 +437,43 @@ export default function MapView({
         )}
     </>
   );
+}
+
+// Continental US and southern Canada: where most trips are planned.
+const PREVIEW_BOUNDS: [LonLat, LonLat] = [
+  [-124, 25],
+  [-67, 49],
+];
+
+/** The dark basemap with nothing on it, behind the empty state. Decorative and still. */
+export function BasemapPreview() {
+  const container = useRef<HTMLDivElement>(null);
+  const [failed] = useState(() => !supportsWebGL());
+
+  useEffect(() => {
+    if (failed || !container.current) return;
+    const instance = new MapLibreMap({
+      container: container.current,
+      style: BASEMAP_STYLE,
+      bounds: PREVIEW_BOUNDS,
+      interactive: false,
+      attributionControl: { compact: true },
+    });
+    instance.setMissingStyleImageResolver((id) => {
+      if (!instance.hasImage(id)) {
+        instance.addImage(id, { width: 1, height: 1, data: new Uint8Array(4) });
+      }
+    });
+    instance.once("load", () =>
+      container.current
+        ?.querySelector(".maplibregl-ctrl-attrib")
+        ?.classList.remove("maplibregl-compact-show"),
+    );
+    return () => instance.remove();
+  }, [failed]);
+
+  if (failed) return null;
+  return <div ref={container} className="h-full w-full" />;
 }
 
 function source(instance: MapLibreMap, id: string): GeoJSONSourceLike | undefined {

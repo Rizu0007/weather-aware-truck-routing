@@ -4,9 +4,10 @@ import { describe, expect, it } from "vitest";
 import { CheckpointTable } from "@/components/features/results/checkpoint-table";
 import { Recommendation } from "@/components/features/results/recommendation";
 import { RiskStrip } from "@/components/features/results/risk-strip";
+import { RouteCardList } from "@/components/features/results/route-card-list";
 import tripPlan from "@/test/fixtures/trip-plan.json";
 import type { PlannedRoute, TripPlan } from "@/types/api";
-import { formatClock } from "@/utils/format";
+import { formatClock, formatDuration } from "@/utils/format";
 
 const PLAN = tripPlan as TripPlan;
 const ROUTE_A = PLAN.routes.find((route) => route.id === "A")!;
@@ -29,6 +30,37 @@ describe("Recommendation", () => {
     render(<Recommendation plan={calm} />);
 
     expect(screen.queryByText(/^Avoids/)).not.toBeInTheDocument();
+  });
+});
+
+describe("RouteCardList", () => {
+  const renderList = (selectedId: string) =>
+    render(
+      <RouteCardList
+        routes={PLAN.routes}
+        recommendedId={PLAN.recommended_route_id}
+        selectedId={selectedId}
+        onSelect={() => {}}
+      />,
+    );
+
+  it("shows how much longer each route takes than the recommended one", () => {
+    renderList("B");
+    const best = PLAN.routes.find((route) => route.id === PLAN.recommended_route_id)!;
+    const gap = Math.abs(ROUTE_A.duration_s - best.duration_s);
+    const sign = ROUTE_A.duration_s > best.duration_s ? "+" : "−";
+
+    expect(screen.getByRole("radio", { name: /Route A/ })).toHaveAccessibleName(
+      new RegExp(`${sign}${formatDuration(gap)}`),
+    );
+    expect(screen.getByRole("radio", { name: /Route B/ })).toHaveAccessibleName(/Best/);
+  });
+
+  it("details the selected route below the cards", () => {
+    renderList("A");
+
+    expect(screen.getByText("Route A", { selector: "p > span" })).toBeInTheDocument();
+    expect(screen.getAllByRole("list")).toHaveLength(1); // one miles-by-level list, not one per card
   });
 });
 
