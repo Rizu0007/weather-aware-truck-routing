@@ -13,6 +13,7 @@ env = environ.Env(
     OSRM_URL=(str, "https://router.project-osrm.org"),
     OPEN_METEO_URL=(str, "https://api.open-meteo.com/v1/forecast"),
     OPEN_METEO_API_KEY=(str, ""),
+    OPEN_METEO_GEOCODING_URL=(str, "https://geocoding-api.open-meteo.com/v1/search"),
     PHOTON_URL=(str, "https://photon.komoot.io"),
     # Reverse proxies in front of Django (Vercel, Render); used to find the client IP.
     NUM_PROXIES=(int, 0),
@@ -64,6 +65,7 @@ REST_FRAMEWORK = {
 OSRM_URL = env("OSRM_URL")
 OPEN_METEO_URL = env("OPEN_METEO_URL")
 OPEN_METEO_API_KEY = env("OPEN_METEO_API_KEY")
+OPEN_METEO_GEOCODING_URL = env("OPEN_METEO_GEOCODING_URL")
 PHOTON_URL = env("PHOTON_URL")
 
 LANGUAGE_CODE = "en-us"

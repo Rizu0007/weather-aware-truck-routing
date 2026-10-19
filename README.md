@@ -74,8 +74,8 @@ weather heatmap.
 | Service | Limit we hit | What the app does |
 |---|---|---|
 | OSRM demo | 1–2 routes; ~1 request/s policy; occasional 10 s+ stalls | Town via-points (above); a 20 s budget for alternatives, then plan with what was found |
-| Photon | Results are global; typos rank streets first ("Maimi" → Maimi Circle); occasional stalls | North America bounding box; towns before streets unless the query has a number; town lookups in parallel, capped at 8 s |
-| Open-Meteo | ~600 locations/min for all users; ~15 days ahead; slow on large batches | Batches of 200, 15-min cache, heatmap ≤ 120 cells, a 429 becomes "busy, retry in N s" |
+| Photon | Results are global; typos rank streets first ("Maimi" → Maimi Circle); occasional stalls and hours-long outages | North America bounding box; towns before streets unless the query has a number; town lookups in parallel, capped at 8 s; while it's down, place search falls back to Open-Meteo geocoding (towns and cities only) for 60 s at a time |
+| Open-Meteo | ~600 locations/min for all users; ~15 days ahead; a heavy caller is slowed to ~0.45 s per location, and 4 parallel requests get 503s | Batches of 50, 2 at a time, read timeout grown with batch size (up to 45 s), 15-min cache, heatmap ≤ 120 cells, a 429 becomes "busy, retry in N s" |
 
 Repeat plans are served from the backend cache in ~0.1 s. The UI says "Still working…" after 10 s
 and waits up to 90 s.

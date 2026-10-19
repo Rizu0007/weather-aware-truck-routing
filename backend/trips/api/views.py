@@ -10,7 +10,7 @@ from trips.api.serializers import (
     TripPlanInputSerializer,
     TripPlanOutputSerializer,
 )
-from trips.integrations import photon
+from trips.services import place_search
 from trips.services.heatmap import build_heatmap
 from trips.services.trip_planning import plan_trip
 
@@ -28,7 +28,7 @@ class PlaceSearchApi(APIView):
     def get(self, request: Request) -> Response:
         params = PlaceSearchInputSerializer(data=request.query_params)
         params.is_valid(raise_exception=True)
-        places = photon.search(params.validated_data["q"])
+        places = place_search.search(params.validated_data["q"])
         return Response(PlaceOutputSerializer(places, many=True).data)
 
 
