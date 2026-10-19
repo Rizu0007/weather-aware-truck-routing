@@ -28,6 +28,23 @@ export interface Checkpoint extends Point {
   rain_level: RiskLevel;
   snow_level: RiskLevel;
   reasons: string[];
+  conditions: Conditions;
+}
+
+export type ConditionFlag = "crosswind" | "freezing" | "low_visibility";
+
+/** What else the driver should know at a checkpoint: shown, never scored. Null when the
+ *  forecast lacks a value. */
+export interface Conditions {
+  /** WMO weather interpretation code. */
+  weather_code: number | null;
+  temperature_f: number | null;
+  gust_mph: number | null;
+  visibility_mi: number | null;
+  precip_probability: number | null;
+  /** Wind (gusts when known) across the road. */
+  crosswind_mph: number | null;
+  flags: ConditionFlag[];
 }
 
 export interface RouteSummary {

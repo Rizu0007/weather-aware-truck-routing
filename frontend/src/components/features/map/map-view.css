@@ -77,12 +77,53 @@
   border: 3px solid var(--route-casing, #0d1a2e);
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
   pointer-events: none;
-  z-index: 2;
+  z-index: 3;
 }
 
 /* Popups over the route labels and the truck. */
 .maplibregl-popup {
-  z-index: 3;
+  z-index: 4;
+}
+
+/* A numbered trip-briefing change: a badge with a pointer down to its checkpoint. */
+/* No `position` here: MapLibre positions markers absolutely, which ::after also needs. */
+.briefing-pin {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 9999px;
+  border: 2px solid var(--route-casing, #0d1a2e);
+  color: var(--risk-foreground);
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.45);
+  cursor: pointer;
+  z-index: 2;
+}
+
+.briefing-pin::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  translate: -50% 0;
+  border: 5px solid transparent;
+  border-top-color: var(--route-casing, #0d1a2e);
+}
+
+.briefing-pin[data-tone="good"] {
+  background: var(--success);
+}
+.briefing-pin[data-tone="info"] {
+  background: var(--info);
+}
+.briefing-pin[data-tone="warning"] {
+  background: var(--warning);
+}
+.briefing-pin[data-tone="danger"] {
+  background: var(--destructive-inline);
 }
 
 /* A route's summary on the map; click to select it. */
@@ -101,16 +142,25 @@
   font-variant-numeric: tabular-nums;
   box-shadow: var(--shadow-card);
   cursor: pointer;
-  opacity: 0.85;
+  opacity: 0.8;
   z-index: 1;
 }
 
-.route-label:hover,
-.route-label-selected {
+.route-label:hover {
   opacity: 1;
+  border-color: var(--muted-foreground);
 }
 
+/* Above the other labels; the truck and popups stay on top. */
 .route-label-selected {
+  opacity: 1;
+  border: 2px solid var(--primary);
+  font-size: 13px;
+  box-shadow: var(--shadow-glow), var(--shadow-card);
+  z-index: 2;
+}
+
+.route-label-selected:hover {
   border-color: var(--primary);
 }
 

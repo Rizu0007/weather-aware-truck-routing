@@ -127,6 +127,18 @@ def mock_forecast(weather=calm):
                 "showers": [v["showers"] for v in values],
                 "snowfall": [v["snow"] for v in values],
                 "wind_direction_10m": [v.get("wind_from", 270.0) for v in values],
+                "wind_gusts_10m": [v.get("gust", v["wind"] and v["wind"] * 1.3) for v in values],
+                "temperature_2m": [v.get("temp_f", 60.0) for v in values],
+                "visibility": [v.get("visibility_m", 24_000.0) for v in values],
+                "weather_code": [v.get("code", 0) for v in values],
+                "precipitation_probability": [v.get("precip_probability", 0) for v in values],
+            }
+            location["hourly_units"] = location["hourly_units"] | {
+                "wind_gusts_10m": "mp/h",
+                "temperature_2m": "°F",
+                "visibility": "m",
+                "weather_code": "wmo code",
+                "precipitation_probability": "%",
             }
             if i:
                 location["location_id"] = i

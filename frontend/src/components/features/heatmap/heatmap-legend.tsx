@@ -20,6 +20,24 @@ export function HeatmapLegend({ motion = false, className }: HeatmapLegendProps)
           </li>
         ))}
       </ul>
+      <ul aria-label="On the selected route" className="flex flex-wrap gap-x-2.5 gap-y-1">
+        <li className="flex items-center gap-1.5">
+          <span
+            aria-hidden="true"
+            className="flex size-3.5 items-center justify-center rounded-full bg-info text-[9px] font-bold text-risk-foreground"
+          >
+            1
+          </span>
+          Briefing point
+        </li>
+        <li className="flex items-center gap-1.5">
+          <span
+            aria-hidden="true"
+            className="size-2.5 rounded-full border-2 border-warning bg-risk-low"
+          />
+          Crosswind, ice or fog
+        </li>
+      </ul>
       {motion && (
         <ul aria-label="What moves on the map" className="flex flex-wrap gap-x-2.5 gap-y-1">
           <li className="flex items-center gap-1.5">

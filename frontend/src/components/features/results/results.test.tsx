@@ -56,11 +56,11 @@ describe("RouteCardList", () => {
     expect(screen.getByRole("radio", { name: /Route B/ })).toHaveAccessibleName(/Best/);
   });
 
-  it("details the selected route below the cards", () => {
+  it("says which route is on the map, on that card only", () => {
     renderList("A");
 
-    expect(screen.getByText("Route A", { selector: "p > span" })).toBeInTheDocument();
-    expect(screen.getAllByRole("list")).toHaveLength(1); // one miles-by-level list, not one per card
+    expect(screen.getByRole("radio", { name: /Route A/ })).toHaveAccessibleName(/On the map/);
+    expect(screen.getByRole("radio", { name: /Route B/ })).not.toHaveAccessibleName(/On the map/);
   });
 });
 

@@ -3,7 +3,14 @@
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from trips.domain.geo import Coord, cumulative_miles, haversine_mi, locate, point_at_mile
+from trips.domain.geo import (
+    Coord,
+    cumulative_miles,
+    haversine_mi,
+    heading_at_mile,
+    locate,
+    point_at_mile,
+)
 
 # A destination this close to the last regular checkpoint replaces it instead of adding another.
 MIN_FINAL_GAP_MI = 0.5
@@ -17,6 +24,7 @@ class Checkpoint:
     # Stretch of road this checkpoint stands for: half-way to each neighbour.
     start_mile: float
     end_mile: float
+    heading_deg: float = 0.0  # direction of travel, for crosswind
 
     @property
     def miles_covered(self) -> float:
@@ -95,6 +103,7 @@ def build_checkpoints(
                 eta=departure + timedelta(seconds=timeline.seconds_at_mile(mile)),
                 start_mile=start,
                 end_mile=end,
+                heading_deg=heading_at_mile(timeline.coords, timeline.cum_miles, mile),
             )
         )
     return checkpoints

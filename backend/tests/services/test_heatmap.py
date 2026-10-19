@@ -32,8 +32,9 @@ def test_returns_49_hourly_levels_per_cell_from_departure_hour():
     assert heatmap.hours == 49
     assert all(len(c.risk) == 49 for c in heatmap.cells)
     assert {level for c in heatmap.cells for level in c.risk} == {RiskLevel.LOW}
-    [request] = responses.calls
-    assert request.request.params["start_hour"] == heatmap.start.strftime("%Y-%m-%dT%H:00")
+    assert {c.request.params["start_hour"] for c in responses.calls} == {
+        heatmap.start.strftime("%Y-%m-%dT%H:00")
+    }
 
 
 @responses.activate

@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 
 import {
   boundsOf,
+  briefingPins,
   checkpointIndex,
   checkpointPoints,
   endpoints,
-  labelPoint,
+  labelPlacement,
   otherCheckpointPoints,
   riskSegments,
   routeLines,
@@ -103,19 +104,49 @@ describe("route labels and other checkpoints", () => {
     const shared: LonLat[] = Array.from({ length: 11 }, (_, x) => [x, 0]);
     const bowed: LonLat[] = shared.map(([x]) => [x, x > 2 && x < 8 ? 3 - Math.abs(x - 5) : 0]);
 
-    expect(labelPoint(line(bowed), [line(shared)])).toEqual([5, 3]);
+    expect(labelPlacement(line(bowed), [line(shared)]).lonLat).toEqual([5, 3]);
+  });
+
+  it("puts each label on its route's far side from the neighbour, so they don't overlap", () => {
+    const west: LonLat[] = Array.from({ length: 11 }, (_, y) => [0, y]);
+    const east: LonLat[] = Array.from({ length: 11 }, (_, y) => [1, y]);
+
+    expect(labelPlacement(line(west), [line(east)]).side).toBe("west");
+    expect(labelPlacement(line(east), [line(west)]).side).toBe("east");
+  });
+
+  it("keeps the label off the briefing pins", () => {
+    const shared: LonLat[] = Array.from({ length: 11 }, (_, x) => [x, 0]);
+    const bowed: LonLat[] = shared.map(([x]) => [x, x > 2 && x < 8 ? 3 - Math.abs(x - 5) : 0]);
+    // The label reaches 2 degrees east of where it's anchored.
+    const placed = labelPlacement(line(bowed), [line(shared)], [[6, 2]], [2, 1]);
+
+    // [5, 3] and [4, 2] would reach over the pin at [6, 2]; [3, 1] stops short of it.
+    expect(placed.lonLat).toEqual([3, 1]);
+  });
+
+  it("turns a label that would run off the map's edge", () => {
+    const west: LonLat[] = Array.from({ length: 11 }, (_, y) => [0, y]);
+    const east: LonLat[] = Array.from({ length: 11 }, (_, y) => [1, y]);
+    const view: [LonLat, LonLat] = [
+      [-1, 0],
+      [1.5, 10],
+    ];
+
+    // East of the east route is where it belongs, but only half a degree is left there.
+    expect(labelPlacement(line(east), [line(west)], [], [0.8, 0.2], view).side).toBe("west");
   });
 
   it("labels a lone route at its middle", () => {
     expect(
-      labelPoint(
+      labelPlacement(
         line([
           [0, 0],
           [1, 0],
           [2, 0],
         ]),
         [],
-      ),
+      ).lonLat,
     ).toEqual([1, 0]);
   });
 
@@ -125,5 +156,30 @@ describe("route labels and other checkpoints", () => {
 
     expect(features).toHaveLength(others.reduce((n, route) => n + route.checkpoints.length, 0));
     expect(features.every((f) => f.properties?.routeId !== "A")).toBe(true);
+  });
+});
+
+describe("briefing pins and warning rings", () => {
+  const routeA = PLAN.routes.find((route) => route.id === "A")!;
+
+  it("pins each numbered briefing change at its checkpoint", () => {
+    const pins = briefingPins(routeA);
+
+    expect(pins.map((pin) => pin.number)).toEqual(pins.map((_, index) => index + 1));
+    expect(pins.length).toBeGreaterThan(0);
+    for (const pin of pins) {
+      const checkpoint = routeA.checkpoints.find((c) => c.mile === pin.mile)!;
+      expect(pin.lonLat).toEqual([checkpoint.lon, checkpoint.lat]);
+    }
+    expect(pins.some((pin) => pin.tone === "danger")).toBe(true); // the storm
+  });
+
+  it("marks checkpoints with a crosswind, ice or fog flag for the warning ring", () => {
+    const { features } = checkpointPoints(routeA);
+
+    expect(features.map((f) => f.properties?.warn as boolean)).toEqual(
+      routeA.checkpoints.map((c) => c.conditions.flags.length > 0),
+    );
+    expect(features.some((f) => f.properties?.warn)).toBe(true);
   });
 });

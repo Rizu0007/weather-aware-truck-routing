@@ -13,18 +13,34 @@ from trips.exceptions import ProviderBusyError, ProviderError
 from trips.integrations.http import get_json
 
 PROVIDER = "open-meteo"
-BATCH_SIZE = 200  # ~500+ locations overflow the URL (HTTP 414)
-PARALLEL_REQUESTS = 4
+# A heavy caller is served at ~0.45 s per location, and 4 requests at once get 503s, so
+# batches stay small and each gets time in proportion to its size (scripts/probe_open_meteo.py).
+BATCH_SIZE = 50
+PARALLEL_REQUESTS = 2
+READ_TIMEOUT_S = 10
+READ_TIMEOUT_PER_LOCATION_S = 0.6
+MAX_READ_TIMEOUT_S = 45
 # The model grid is ~3 km, so points closer than this share a forecast.
 SNAP_DEG = 0.05
 CACHE_TTL_S = 15 * 60
 HOURLY_FIELDS = ("wind_speed_10m", "rain", "showers", "snowfall")
-# Only drawn (the map animates wind with it), never scored, so a response without it still parses.
+# Shown to the driver or drawn, never scored: a response without them, or in a unit we don't
+# know, still parses, with those values missing. 10 fields in all: more count as extra calls.
 DIRECTION_FIELD = "wind_direction_10m"
+INFO_FIELDS = (
+    DIRECTION_FIELD,
+    "wind_gusts_10m",
+    "temperature_2m",
+    "visibility",
+    "weather_code",
+    "precipitation_probability",
+)
 TIME_FORMAT = "%Y-%m-%dT%H:%M"
 
 TO_MPH = {"mp/h": 1.0, "km/h": 1 / 1.609344, "m/s": 2.236936, "kn": 1.150779}
 TO_INCH = {"inch": 1.0, "mm": 1 / 25.4, "cm": 1 / 2.54}
+TO_MILES = {"m": 1 / 1609.344, "ft": 1 / 5280}
+TO_FAHRENHEIT = {"°F": lambda f: f, "°C": lambda c: c * 9 / 5 + 32}
 
 
 @dataclass(frozen=True)
@@ -35,8 +51,13 @@ class HourlySeries:
     wind_mph: list[float | None]
     rain_in_hr: list[float | None]
     snow_in_hr: list[float | None]
-    # Degrees the wind blows from (meteorological); None per hour, or for the series, if absent.
-    wind_from_deg: list[float | None] | None = None
+    # Information only; None per hour, or for the whole series, if absent.
+    wind_from_deg: list[float | None] | None = None  # degrees it blows from (meteorological)
+    gust_mph: list[float | None] | None = None
+    temperature_f: list[float | None] | None = None
+    visibility_mi: list[float | None] | None = None
+    weather_code: list[int | None] | None = None  # WMO weather interpretation code
+    precip_probability: list[int | None] | None = None  # percent
 
 
 def snap(coord: Coord) -> Coord:
@@ -67,7 +88,7 @@ def hourly(points: list[Coord], start: datetime, hours: int) -> list[HourlySerie
 
 
 def _cache_key(coord: Coord, start: datetime, hours: int) -> str:
-    return f"wx2:{coord[0]:.2f}:{coord[1]:.2f}:{start:%Y%m%d%H}:{hours}"
+    return f"wx3:{coord[0]:.2f}:{coord[1]:.2f}:{start:%Y%m%d%H}:{hours}"
 
 
 def _fetch_all(coords: list[Coord], start: datetime, hours: int) -> dict[Coord, HourlySeries]:
@@ -81,8 +102,9 @@ def _fetch_batch(coords: list[Coord], start: datetime, hours: int) -> dict[Coord
     params = {
         "latitude": ",".join(f"{lat:.2f}" for _, lat in coords),
         "longitude": ",".join(f"{lon:.2f}" for lon, _ in coords),
-        "hourly": ",".join((*HOURLY_FIELDS, DIRECTION_FIELD)),
+        "hourly": ",".join((*HOURLY_FIELDS, *INFO_FIELDS)),
         "wind_speed_unit": "mph",
+        "temperature_unit": "fahrenheit",
         "precipitation_unit": "inch",
         "timezone": "GMT",
         "start_hour": start.strftime(TIME_FORMAT),
@@ -91,7 +113,17 @@ def _fetch_batch(coords: list[Coord], start: datetime, hours: int) -> dict[Coord
     if settings.OPEN_METEO_API_KEY:
         params["apikey"] = settings.OPEN_METEO_API_KEY
 
-    body = get_json(PROVIDER, settings.OPEN_METEO_URL, params, rate_limit=_quota_error)
+    # A timeout cut short an answer that was on its way, and its retry spends the quota again.
+    read_timeout = min(
+        MAX_READ_TIMEOUT_S, READ_TIMEOUT_S + READ_TIMEOUT_PER_LOCATION_S * len(coords)
+    )
+    body = get_json(
+        PROVIDER,
+        settings.OPEN_METEO_URL,
+        params,
+        rate_limit=_quota_error,
+        read_timeout_s=read_timeout,
+    )
     # One location comes back as an object, several as a list.
     locations = [body] if isinstance(body, dict) else body
     if not isinstance(locations, list) or len(locations) != len(coords):
@@ -152,9 +184,21 @@ def _parse_location(location: dict, start: datetime, hours: int) -> HourlySeries
     ):
         raise ProviderError(PROVIDER, extra={"reason": "unexpected forecast window"})
 
-    direction = data.get(DIRECTION_FIELD)
-    if not isinstance(direction, list) or len(direction) != hours:
-        direction = None
+    def info(field: str, convert=lambda v: v):
+        values = data.get(field)
+        if not isinstance(values, list) or len(values) != hours:
+            return None
+        try:
+            return [None if v is None else convert(v) for v in values]
+        except (TypeError, ValueError):
+            return None
+
+    def unit(field: str, table: dict):
+        return table.get(units.get(field))
+
+    gust_factor = unit("wind_gusts_10m", TO_MPH)
+    miles_factor = unit("visibility", TO_MILES)
+    to_fahrenheit = unit("temperature_2m", TO_FAHRENHEIT)
     wind, rain, showers, snow = columns
     return HourlySeries(
         start=start,
@@ -164,7 +208,12 @@ def _parse_location(location: dict, start: datetime, hours: int) -> HourlySeries
             for r, s in zip(rain, showers, strict=True)
         ],
         snow_in_hr=[_scaled(v, snow_factor) for v in snow],
-        wind_from_deg=direction,
+        wind_from_deg=info(DIRECTION_FIELD),
+        gust_mph=gust_factor and info("wind_gusts_10m", lambda v: v * gust_factor),
+        temperature_f=to_fahrenheit and info("temperature_2m", to_fahrenheit),
+        visibility_mi=miles_factor and info("visibility", lambda v: v * miles_factor),
+        weather_code=info("weather_code", int),
+        precip_probability=info("precipitation_probability", int),
     )
 
 

@@ -1,8 +1,10 @@
 import pytest
 
 from trips.domain.geo import (
+    bearing_deg,
     cumulative_miles,
     haversine_mi,
+    heading_at_mile,
     locate,
     point_at_mile,
     simplify,
@@ -69,3 +71,20 @@ def test_simplify_shrinks_a_real_route(dallas_houston_route):
 
     assert simplified[0] == coords[0] and simplified[-1] == coords[-1]
     assert len(simplified) < len(coords) / 3
+
+
+@pytest.mark.parametrize(
+    ("to", "expected"),
+    [((0.0, 1.0), 0), ((1.0, 0.0), 90), ((0.0, -1.0), 180), ((-1.0, 0.0), 270)],
+)
+def test_bearing_is_clockwise_from_north(to, expected):
+    assert bearing_deg((0.0, 0.0), to) == pytest.approx(expected)
+
+
+def test_heading_at_mile_follows_the_road_through_a_bend():
+    # North for ~69 mi, then east.
+    line = [(0.0, 0.0), (0.0, 1.0), (1.0, 1.0)]
+    cum = cumulative_miles(line)
+
+    assert heading_at_mile(line, cum, 20) == pytest.approx(0, abs=0.1)
+    assert heading_at_mile(line, cum, cum[-1] - 20) == pytest.approx(90, abs=1)

@@ -1,6 +1,7 @@
 import type { Feature, FeatureCollection, LineString, Point } from "geojson";
 
 import type { Checkpoint, LonLat, PlannedRoute } from "@/types/api";
+import { tripBriefing, type BriefingTone } from "@/utils/briefing";
 
 // Pure builders from API data to GeoJSON, so they can be tested without WebGL.
 
@@ -37,9 +38,32 @@ export function checkpointPoints(route: PlannedRoute): FeatureCollection<Point> 
     type: "Feature",
     id: index,
     geometry: { type: "Point", coordinates: [checkpoint.lon, checkpoint.lat] },
-    properties: { mile: checkpoint.mile, level: checkpoint.level },
+    properties: {
+      mile: checkpoint.mile,
+      level: checkpoint.level,
+      // Crosswind, ice or fog there: drawn with a warning ring.
+      warn: checkpoint.conditions.flags.length > 0,
+    },
   }));
   return { type: "FeatureCollection", features };
+}
+
+export interface BriefingPin {
+  number: number;
+  mile: number;
+  lonLat: LonLat;
+  tone: BriefingTone;
+  text: string;
+}
+
+/** The trip briefing's numbered changes, where they happen on the road. */
+export function briefingPins(route: PlannedRoute): BriefingPin[] {
+  return tripBriefing(route, "", "").flatMap((item) => {
+    const checkpoint = route.checkpoints.find((c) => c.mile === item.mile);
+    if (!item.number || !checkpoint) return [];
+    const lonLat: LonLat = [checkpoint.lon, checkpoint.lat];
+    return [{ number: item.number, mile: item.mile, lonLat, tone: item.tone, text: item.text }];
+  });
 }
 
 /** Checkpoints of the routes not selected, drawn faded so every route shows where it was checked. */
@@ -62,23 +86,69 @@ export function otherCheckpointPoints(
 const LABEL_CANDIDATES = 100;
 const LABEL_NEIGHBOURS = 400;
 
-/** A point on `route` as far as possible from the others, so its label never sits on a shared road. */
-export function labelPoint(route: PlannedRoute, others: PlannedRoute[]): LonLat {
+export interface LabelPlacement {
+  lonLat: LonLat;
+  /** Which side of the road the label goes: away from the nearest other route. */
+  side: "east" | "west";
+}
+
+/** Where `route`'s label goes: as far as possible from the other routes, on its far side from
+ *  the nearest one, and where a label of `size` ([lon, lat] degrees) covers none of `avoid`
+ *  and stays inside `within` (the map's view). */
+export function labelPlacement(
+  route: PlannedRoute,
+  others: PlannedRoute[],
+  avoid: LonLat[] = [],
+  size: LonLat = [0, 0],
+  within?: [LonLat, LonLat],
+): LabelPlacement {
   const line = route.geometry;
   // The middle 80%: near the ends every route shares the same streets.
   const from = Math.floor(line.length * 0.1);
   const to = Math.max(from + 1, Math.ceil(line.length * 0.9));
   const candidates = every(line.slice(from, to), LABEL_CANDIDATES);
   const neighbours = others.flatMap((other) => every(other.geometry, LABEL_NEIGHBOURS));
-  if (!neighbours.length) return line[Math.floor(line.length / 2)];
 
-  let best = candidates[0];
-  let bestDistance = -1;
+  let best: (LabelPlacement & { distance: number }) | null = null;
   for (const point of candidates) {
-    const nearest = Math.min(...neighbours.map((other) => flatDistanceSq(point, other)));
-    if (nearest > bestDistance) [best, bestDistance] = [point, nearest];
+    const nearest = neighbours.length ? nearestOf(point, neighbours) : null;
+    let side: LabelPlacement["side"] = nearest && nearest[0] > point[0] ? "west" : "east";
+    // Running off the map's edge: the other side, if that fits.
+    if (within && !fits(point, side, size, within)) side = side === "east" ? "west" : "east";
+    if (within && !fits(point, side, size, within)) continue;
+    if (avoid.some((pin) => covers(point, side, size, pin))) continue;
+    // A lone route: its middle.
+    const distance = nearest ? flatDistanceSq(point, nearest) : -Math.abs(point[0] - mid(line)[0]);
+    if (!best || distance > best.distance) best = { lonLat: point, side, distance };
   }
-  return best;
+  if (best) return { lonLat: best.lonLat, side: best.side };
+  // Nowhere clear of the pins and edges: ignore them.
+  return avoid.length || within
+    ? labelPlacement(route, others)
+    : { lonLat: mid(line), side: "east" };
+}
+
+function mid(line: LonLat[]): LonLat {
+  return line[Math.floor(line.length / 2)];
+}
+
+function fits(
+  [lon]: LonLat,
+  side: "east" | "west",
+  [w]: LonLat,
+  [[west], [east]]: [LonLat, LonLat],
+) {
+  return side === "east" ? lon + w <= east : lon - w >= west;
+}
+
+/** Whether a label anchored at `point`, reaching `side`, overlaps `pin`. */
+function covers([lon, lat]: LonLat, side: "east" | "west", [w, h]: LonLat, [x, y]: LonLat) {
+  const [left, right] = side === "east" ? [lon, lon + w] : [lon - w, lon];
+  return x >= left - h / 2 && x <= right + h / 2 && Math.abs(y - lat) <= h;
+}
+
+function nearestOf(point: LonLat, points: LonLat[]): LonLat {
+  return points.reduce((a, b) => (flatDistanceSq(point, a) <= flatDistanceSq(point, b) ? a : b));
 }
 
 /** About `count` evenly spaced points of a line. */

@@ -2,7 +2,6 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "@/components/features/map/map-view.css";
 
 import {
-  AttributionControl,
   LngLatBounds,
   Map as MapLibreMap,
   Marker,
@@ -19,10 +18,11 @@ import { createPortal } from "react-dom";
 import { CheckpointPopup } from "@/components/features/map/checkpoint-popup";
 import {
   boundsOf,
+  briefingPins,
   checkpointIndex,
   checkpointPoints,
   endpoints,
-  labelPoint,
+  labelPlacement,
   otherCheckpointPoints,
   riskSegments,
   routeLines,
@@ -46,6 +46,10 @@ import type { Heatmap, LonLat, PlannedRoute } from "@/types/api";
 setWorkerUrl(workerUrl);
 
 const FIT_PADDING = 48;
+const PIN_CLEARANCE_PX = 30; // a briefing pin and its pointer
+const PIN_CLOSE_SHARE = 0.02;
+const MAX_LABEL_SHARE = 0.45;
+const PIN_FAN_PX = 24;
 const TRUCK_GLIDE_MS = 900; // a little under playback's hour-a-second, so it arrives each step
 
 /** The truck badge: lucide's truck in a turquoise disc (decorative; the timeline says where). */
@@ -62,11 +66,17 @@ function truckElement(): HTMLElement {
   return element;
 }
 
-/** A route's summary pinned to the map: id, drive time, distance and safety grade.
+/** A route's summary pinned to the map. The selected route's shows everything; the others
+ *  only their letter and time, so they don't compete or overlap.
  *  Decorative for screen readers; the route cards say the same. */
-function routeLabelElement(route: PlannedRoute, recommended: boolean): HTMLElement {
+function routeLabelElement(
+  route: PlannedRoute,
+  recommended: boolean,
+  selected: boolean,
+  compact = !selected,
+): HTMLElement {
   const element = document.createElement("div");
-  element.className = "route-label";
+  element.className = selected ? "route-label route-label-selected" : "route-label";
   element.dataset.grade = route.summary.grade;
   element.setAttribute("aria-hidden", "true");
   const part = (className: string, text: string) => {
@@ -76,12 +86,28 @@ function routeLabelElement(route: PlannedRoute, recommended: boolean): HTMLEleme
     element.append(span);
   };
   part("route-label-id", route.id);
+  if (compact) {
+    part("route-label-stats", formatDuration(route.duration_s));
+    return element;
+  }
   if (recommended) part("route-label-best", "Best");
   part(
     "route-label-stats",
     `${formatDuration(route.duration_s)} · ${formatMiles(route.distance_mi)}`,
   );
-  part("route-label-grade", `${route.summary.grade} ${route.summary.safety_score}`);
+  part("route-label-grade", `Grade ${route.summary.grade} · ${route.summary.safety_score}`);
+  return element;
+}
+
+/** A numbered pin for one trip-briefing change; hovering shows what happens there.
+ *  Hidden from screen readers: the briefing list says the same. */
+function briefingPinElement(number: number, tone: string, text: string): HTMLElement {
+  const element = document.createElement("div");
+  element.className = "briefing-pin";
+  element.dataset.tone = tone;
+  element.title = text;
+  element.setAttribute("aria-hidden", "true");
+  element.textContent = String(number);
   return element;
 }
 
@@ -174,6 +200,7 @@ export default function MapView({
 
   const truck = useRef<{ marker: Marker; shownAt: number; frame: number } | null>(null);
   const labels = useRef(new Map<string, Marker>());
+  const pins = useRef<Marker[]>([]);
 
   /** The truck's time at the slider's hour: from the heatmap's start, else from departure. */
   function truckTime(): number {
@@ -214,12 +241,10 @@ export default function MapView({
       fitBoundsOptions: { padding: fitPadding() },
       // Touch screens: one finger scrolls the page, two move the map. A mouse wheel zooms.
       cooperativeGestures: matchMedia("(pointer: coarse)").matches,
-      // Top-right, under the zoom buttons: the forecast timeline covers the bottom.
-      attributionControl: false,
+      attributionControl: { compact: true },
     });
     map.current = instance;
     instance.addControl(new NavigationControl({ showCompass: false }), "top-right");
-    instance.addControl(new AttributionControl({ compact: true }), "top-right");
     // The basemap style references a few POI icons it doesn't ship; draw them as nothing.
     instance.setMissingStyleImageResolver((id) => {
       if (!instance.hasImage(id)) {
@@ -317,10 +342,8 @@ export default function MapView({
     void source(instance, SOURCES.otherCheckpoints)?.setData(
       otherCheckpointPoints(routes, selected.id),
     );
-    for (const [id, marker] of labels.current) {
-      marker.getElement().classList.toggle("route-label-selected", id === selected.id);
-    }
     const { casing, risk } = selectionPaint(selected.id);
+    instance.setPaintProperty(LAYERS.casing, "line-color", casing["line-color"]);
     instance.setPaintProperty(LAYERS.casing, "line-width", casing["line-width"]);
     instance.setPaintProperty(LAYERS.casing, "line-opacity", casing["line-opacity"]);
     instance.setPaintProperty(LAYERS.risk, "line-width", risk["line-width"]);
@@ -332,20 +355,56 @@ export default function MapView({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, selected]);
 
-  // A summary label per route, placed where it doesn't share road with the others.
+  // A label per route, where it doesn't share road with the others, on its far side from them.
   useEffect(() => {
     const instance = map.current;
     if (!loaded || !instance) return;
     const placed = labels.current;
+    const width = instance.getContainer().clientWidth;
+    // Degrees per pixel once the routes are fitted (the fit may still be animating).
+    const [[west, south], [east, north]] = boundsOf(routes);
+    const lonPerPx = (east - west) / Math.max(1, width - 2 * FIT_PADDING);
+    const latPerPx = lonPerPx * Math.cos((((south + north) / 2) * Math.PI) / 180);
+    // Measured off-screen: the label must not cover a pin anywhere along its width.
+    // Absolute, as a marker is: a block would stretch to the map's width.
+    const measure = (element: HTMLElement) => {
+      element.style.cssText = "visibility: hidden; position: absolute";
+      instance.getContainer().append(element);
+      const px = [element.offsetWidth, element.offsetHeight];
+      element.remove();
+      element.style.cssText = "";
+      return px;
+    };
     for (const route of routes) {
-      const element = routeLabelElement(route, route.id === routes[0].id);
-      element.classList.toggle("route-label-selected", route.id === latest.current.selected.id);
+      const isSelected = route.id === selected.id;
+      const recommended = route.id === routes[0].id;
+      let element = routeLabelElement(route, recommended, isSelected);
+      let [w, h] = measure(element);
+      // On a narrow map the full label would cover most of it.
+      if (isSelected && w > width * MAX_LABEL_SHARE) {
+        element = routeLabelElement(route, recommended, true, true);
+        [w, h] = measure(element);
+      }
       element.addEventListener("click", () => latest.current.onSelectRoute(route.id));
       const others = routes.filter((other) => other.id !== route.id);
+      const avoid = isSelected ? briefingPins(route).map((pin) => pin.lonLat) : [];
+      const size: LonLat = [
+        (w + 10 + PIN_CLEARANCE_PX) * lonPerPx,
+        (h + PIN_CLEARANCE_PX) * latPerPx,
+      ];
+      const view: [LonLat, LonLat] = [
+        [west - FIT_PADDING * lonPerPx, south],
+        [east + FIT_PADDING * lonPerPx, north],
+      ];
+      const { lonLat, side } = labelPlacement(route, others, avoid, size, view);
       placed.set(
         route.id,
-        new Marker({ element, anchor: "bottom", offset: [0, -8] })
-          .setLngLat(labelPoint(route, others))
+        new Marker({
+          element,
+          anchor: side === "east" ? "left" : "right",
+          offset: [side === "east" ? 10 : -10, 0],
+        })
+          .setLngLat(lonLat)
           .addTo(instance),
       );
     }
@@ -353,7 +412,37 @@ export default function MapView({
       for (const marker of placed.values()) marker.remove();
       placed.clear();
     };
-  }, [loaded, routes]);
+  }, [loaded, routes, selected.id]);
+
+  // The trip briefing's changes as numbered pins on the selected route.
+  useEffect(() => {
+    const instance = map.current;
+    if (!loaded || !instance) return;
+    const placed = pins.current;
+    // Pins a few miles apart would sit on each other: fan them out sideways.
+    const close = selected.distance_mi * PIN_CLOSE_SHARE;
+    let fanned = 0;
+    let previous = -Infinity;
+    for (const pin of briefingPins(selected)) {
+      fanned = pin.mile - previous < close ? fanned + 1 : 0;
+      previous = pin.mile;
+      const element = briefingPinElement(pin.number, pin.tone, pin.text);
+      element.addEventListener("click", (event) => {
+        // Reaching the map, the same click would close the popup it just opened.
+        event.stopPropagation();
+        latest.current.onActivateCheckpoint(pin.mile);
+      });
+      placed.push(
+        new Marker({ element, anchor: "bottom", offset: [fanned * PIN_FAN_PX, -8] })
+          .setLngLat(pin.lonLat)
+          .addTo(instance),
+      );
+    }
+    return () => {
+      for (const marker of placed) marker.remove();
+      placed.length = 0;
+    };
+  }, [loaded, selected]);
 
   // Heatmap data arrives after the plan; it's loaded once, then each hour only redraws.
   useEffect(() => {

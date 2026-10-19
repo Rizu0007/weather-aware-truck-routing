@@ -72,7 +72,7 @@ export function routeLayers(selectedId: string): AddLayerObject[] {
       type: "line",
       source: SOURCES.segments,
       layout: { "line-join": "round", "line-cap": "round", "line-sort-key": sortKey(selectedId) },
-      paint: { "line-color": casing, ...selectionPaint(selectedId).casing },
+      paint: selectionPaint(selectedId).casing,
     },
     {
       id: LAYERS.risk,
@@ -95,10 +95,10 @@ export function routeLayers(selectedId: string): AddLayerObject[] {
       source: SOURCES.otherCheckpoints,
       paint: {
         "circle-color": levelColor(colors),
-        "circle-opacity": 0.7,
+        "circle-opacity": 0.45,
         "circle-stroke-color": casing,
         "circle-stroke-width": 1.5,
-        "circle-stroke-opacity": 0.7,
+        "circle-stroke-opacity": 0.45,
         "circle-radius": expression<number>(["interpolate", ["linear"], ["zoom"], 4, 2.5, 9, 4]),
       },
     },
@@ -108,8 +108,19 @@ export function routeLayers(selectedId: string): AddLayerObject[] {
       source: SOURCES.checkpoints,
       paint: {
         "circle-color": levelColor(colors),
-        "circle-stroke-color": casing,
-        "circle-stroke-width": 2,
+        // An amber ring where there's a crosswind, ice risk or fog, so a whole stretch shows.
+        "circle-stroke-color": expression<string>([
+          "case",
+          ["boolean", ["get", "warn"], false],
+          token("--warning", "#fbbf24"),
+          casing,
+        ]),
+        "circle-stroke-width": expression<number>([
+          "case",
+          ["boolean", ["get", "warn"], false],
+          3,
+          2,
+        ]),
         // MapLibre allows "zoom" only at the top of an expression, so the
         // active check goes inside each zoom stop.
         "circle-radius": expression<number>([
@@ -137,16 +148,23 @@ export function routeLayers(selectedId: string): AddLayerObject[] {
   ];
 }
 
-/** Paint values that change with the selection: wider and opaque for the selected route. */
+/** Paint values that change with the selection. The selected route gets a white outline and
+ *  full strength, so it stands out even when every route is the same risk colour. */
 export function selectionPaint(selectedId: string) {
-  const pick = (selected: number, other: number) =>
-    expression<number>(["case", isSelected(selectedId), selected, other]);
+  const pick = <T>(selected: T, other: T) =>
+    expression<T>(["case", isSelected(selectedId), selected, other]);
   return {
-    // Others stay clear enough that their risky stretches show without selecting them.
-    casing: { "line-width": pick(9, 6), "line-opacity": pick(1, 0.7) },
-    risk: { "line-width": pick(5, 3.5), "line-opacity": pick(1, 0.8) },
+    casing: {
+      "line-color": pick(SELECTED_OUTLINE, token("--route-casing", "#0d1a2e")),
+      "line-width": pick(10, 6),
+      "line-opacity": pick(1, 0.6),
+    },
+    // Others stay visible enough that their risky stretches show without selecting them.
+    risk: { "line-width": pick(5.5, 3), "line-opacity": pick(1, 0.55) },
   };
 }
+
+const SELECTED_OUTLINE = "#ffffff";
 
 /** Draw the selected route on top of the others. */
 export function sortKey(selectedId: string) {

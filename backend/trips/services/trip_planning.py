@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 
 from trips.domain.checkpoints import Checkpoint, TruckTimeline, build_checkpoints
+from trips.domain.conditions import Conditions, driving_conditions
 from trips.domain.geo import Coord, simplify, slice_line
 from trips.domain.ranking import (
     Candidate,
@@ -37,6 +38,7 @@ class CheckpointRisk:
     rain_in_hr: float | None
     snow_in_hr: float | None
     assessment: Assessment
+    conditions: Conditions
 
 
 @dataclass(frozen=True)
@@ -103,10 +105,7 @@ def plan_trip(
             option,
             timeline,
             departure,
-            [
-                _assess_checkpoint(c, _weather_at(series[c], c.eta), load_lb)
-                for c in route_checkpoints
-            ],
+            [_checkpoint_risk(c, series[c], load_lb) for c in route_checkpoints],
         )
         for option, timeline, route_checkpoints in zip(
             found.options, timelines, checkpoints, strict=True
@@ -150,9 +149,14 @@ def _series_by_checkpoint(
     return dict(zip(flat, series, strict=True))
 
 
+def _hour_at(series: HourlySeries, moment: datetime) -> int:
+    """Index of the forecast hour nearest `moment`."""
+    return round((moment - series.start) / timedelta(hours=1))
+
+
 def _weather_at(series: HourlySeries, moment: datetime) -> Weather:
     """(wind, rain, snow) at the forecast hour nearest `moment`."""
-    i = round((moment - series.start) / timedelta(hours=1))
+    i = _hour_at(series, moment)
     return series.wind_mph[i], series.rain_in_hr[i], series.snow_in_hr[i]
 
 
@@ -193,11 +197,7 @@ def _best_route(
         levels = [
             (
                 r.checkpoint.miles_covered,
-                _assess_checkpoint(
-                    r.checkpoint,
-                    _weather_at(series[r.checkpoint], r.checkpoint.eta + delay),
-                    load_lb,
-                ).assessment.level,
+                _assess(_weather_at(series[r.checkpoint], r.checkpoint.eta + delay), load_lb).level,
             )
             for r in route.checkpoints
         ]
@@ -205,12 +205,36 @@ def _best_route(
     return min(candidates, key=sort_key)
 
 
-def _assess_checkpoint(checkpoint: Checkpoint, weather: Weather, load_lb: int) -> CheckpointRisk:
+def _assess(weather: Weather, load_lb: int) -> Assessment:
     wind, rain, snow = weather
-    assessment = assess(
+    return assess(
         wind_mph=wind or 0.0, rain_in_hr=rain or 0.0, snow_in_hr=snow or 0.0, load_lb=load_lb
     )
-    return CheckpointRisk(checkpoint, wind, rain, snow, assessment)
+
+
+def _checkpoint_risk(checkpoint: Checkpoint, series: HourlySeries, load_lb: int) -> CheckpointRisk:
+    """Risk from the brief's rules, plus what else the driver should know there."""
+    i = _hour_at(series, checkpoint.eta)
+    wind, rain, snow = series.wind_mph[i], series.rain_in_hr[i], series.snow_in_hr[i]
+
+    def info(values):
+        return None if values is None else values[i]
+
+    conditions = driving_conditions(
+        heading_deg=checkpoint.heading_deg,
+        wind_mph=wind,
+        wind_from_deg=info(series.wind_from_deg),
+        gust_mph=info(series.gust_mph),
+        temperature_f=info(series.temperature_f),
+        visibility_mi=info(series.visibility_mi),
+        rain_in_hr=rain,
+        snow_in_hr=snow,
+        weather_code=info(series.weather_code),
+        precip_probability=info(series.precip_probability),
+    )
+    return CheckpointRisk(
+        checkpoint, wind, rain, snow, _assess((wind, rain, snow), load_lb), conditions
+    )
 
 
 def _planned_route(

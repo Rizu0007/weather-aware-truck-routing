@@ -71,6 +71,17 @@ def test_returns_ranked_routes_in_the_documented_shape(client):
     assert checkpoint["level"] == "low"
     assert checkpoint["reasons"] == []
     assert "." not in checkpoint["eta"]  # whole seconds
+    # Shown to the driver, never scored: calm, mild and clear in the mock forecast.
+    assert checkpoint["conditions"] == {
+        "weather_code": 0,
+        "temperature_f": 60,
+        "gust_mph": 9,
+        "visibility_mi": 14.9,
+        "precip_probability": 0,
+        "crosswind_mph": checkpoint["conditions"]["crosswind_mph"],
+        "flags": [],
+    }
+    assert 0 <= checkpoint["conditions"]["crosswind_mph"] <= 9
     assert route["segments"][0]["level"] == "low"
     assert len(route["geometry"]) < 2364 / 3  # simplified for the browser
 

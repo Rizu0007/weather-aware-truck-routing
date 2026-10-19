@@ -44,6 +44,25 @@ def point_at_mile(coords: list[Coord], cum_miles: list[float], mile: float) -> C
     return (x1 + (x2 - x1) * t, y1 + (y2 - y1) * t)
 
 
+def bearing_deg(a: Coord, b: Coord) -> float:
+    """Compass bearing from `a` to `b`: 0 is north, 90 east."""
+    lon1, lat1, lon2, lat2 = map(math.radians, (a[0], a[1], b[0], b[1]))
+    y = math.sin(lon2 - lon1) * math.cos(lat2)
+    x = math.cos(lat1) * math.sin(lat2) - math.sin(lat1) * math.cos(lat2) * math.cos(lon2 - lon1)
+    return math.degrees(math.atan2(y, x)) % 360
+
+
+def heading_at_mile(
+    coords: list[Coord], cum_miles: list[float], mile: float, span_mi: float = 0.5
+) -> float:
+    """Direction of travel at `mile`, over `span_mi` either side so one short kink doesn't count."""
+    start = max(0.0, mile - span_mi)
+    end = min(cum_miles[-1], mile + span_mi)
+    return bearing_deg(
+        point_at_mile(coords, cum_miles, start), point_at_mile(coords, cum_miles, end)
+    )
+
+
 def slice_line(
     coords: list[Coord], cum_miles: list[float], start_mi: float, end_mi: float
 ) -> list[Coord]:

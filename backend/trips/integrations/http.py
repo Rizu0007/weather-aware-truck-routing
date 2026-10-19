@@ -13,9 +13,10 @@ from trips.exceptions import ProviderBusyError, ProviderError
 logger = logging.getLogger(__name__)
 
 USER_AGENT = "weather-aware-truck-routing/1.0"
-# (connect, read). Open-Meteo sometimes stalls in the TLS handshake; failing fast and
-# retrying on a new connection is quicker than waiting.
-TIMEOUT_S = (3.05, 10)
+# Open-Meteo sometimes stalls in the TLS handshake; failing fast and retrying on a new
+# connection is quicker than waiting.
+CONNECT_TIMEOUT_S = 3.05
+READ_TIMEOUT_S = 10
 MAX_ATTEMPTS = 3
 BACKOFF_S = 0.5  # doubled after each failed attempt
 RETRY_STATUSES = frozenset({500, 502, 503, 504})
@@ -38,6 +39,7 @@ def get_json(
     params: dict | list,
     accept: frozenset[int] = frozenset({200}),
     rate_limit: Callable[[requests.Response], ProviderBusyError | None] | None = None,
+    read_timeout_s: float = READ_TIMEOUT_S,
 ) -> dict | list:
     """Retries network errors and 5xx; any other status outside `accept` fails at once.
 
@@ -45,7 +47,7 @@ def get_json(
     """
     for attempt in range(1, MAX_ATTEMPTS + 1):
         try:
-            response = _session.get(url, params=params, timeout=TIMEOUT_S)
+            response = _session.get(url, params=params, timeout=(CONNECT_TIMEOUT_S, read_timeout_s))
         except requests.RequestException as exc:
             failure = _API_KEY_PARAM.sub(r"\1***", f"{type(exc).__name__}: {exc}")
             extra = {}

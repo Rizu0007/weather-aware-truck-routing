@@ -1,6 +1,7 @@
 import { MapPin } from "lucide-react";
 import { useEffect, useRef } from "react";
 
+import { ConditionFlags, SkySummary } from "@/components/features/results/conditions";
 import { Badge } from "@/components/ui/badge";
 import { RISK_LABELS } from "@/constants/risk";
 import type { PlannedRoute } from "@/types/api";
@@ -72,8 +73,11 @@ export function CheckpointTable({
             <th scope="col" className="px-3 py-2 font-medium">
               Risk
             </th>
+            <th scope="col" className="px-3 py-2 font-medium">
+              Conditions
+            </th>
             <th scope="col" className="px-3 py-2 text-right font-medium">
-              Wind mph
+              Wind (gust) mph
             </th>
             <th scope="col" className="px-3 py-2 text-right font-medium">
               Rain in/hr
@@ -117,7 +121,21 @@ export function CheckpointTable({
               <td className="px-3 py-2">
                 <Badge variant={checkpoint.level}>{RISK_LABELS[checkpoint.level]}</Badge>
               </td>
-              <td className="px-3 py-2 text-right">{reading(checkpoint.wind_mph, 0)}</td>
+              <td className="px-3 py-2">
+                <span className="flex flex-col gap-1">
+                  <SkySummary conditions={checkpoint.conditions} />
+                  <ConditionFlags conditions={checkpoint.conditions} />
+                </span>
+              </td>
+              <td className="px-3 py-2 text-right whitespace-nowrap">
+                {reading(checkpoint.wind_mph, 0)}
+                {checkpoint.conditions.gust_mph !== null && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    ({Math.round(checkpoint.conditions.gust_mph)})
+                  </span>
+                )}
+              </td>
               <td className="px-3 py-2 text-right">{reading(checkpoint.rain_in_hr, 2)}</td>
               <td className="px-3 py-2 text-right">{reading(checkpoint.snow_in_hr, 1)}</td>
               <td className="min-w-64 px-3 py-2 text-muted-foreground">

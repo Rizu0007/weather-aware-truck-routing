@@ -110,7 +110,25 @@ class CheckpointOutputSerializer(serializers.BaseSerializer):
             "rain_level": _level_key(assessment.rain_level),
             "snow_level": _level_key(assessment.snow_level),
             "reasons": list(assessment.reasons),
+            "conditions": _conditions(risk.conditions),
         }
+
+
+def _conditions(conditions) -> dict:
+    """Shown to the driver, never scored; any value can be null when the forecast lacks it."""
+    return {
+        "weather_code": conditions.weather_code,
+        "temperature_f": _round(conditions.temperature_f, 0),
+        "gust_mph": _round(conditions.gust_mph, 0),
+        "visibility_mi": _round(conditions.visibility_mi, 1),
+        "precip_probability": conditions.precip_probability,
+        "crosswind_mph": _round(conditions.crosswind_mph, 0),
+        "flags": list(conditions.flags),
+    }
+
+
+def _round(value: float | None, decimals: int) -> float | None:
+    return None if value is None else round(value, decimals)
 
 
 class RouteOutputSerializer(serializers.BaseSerializer):

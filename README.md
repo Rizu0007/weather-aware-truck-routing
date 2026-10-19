@@ -15,6 +15,12 @@ weather heatmap.
   0.42 in/hr on route A at mile 220, Tue 2:23 AM").
 - **Weather every 10, 25 or 50 miles** at the truck's estimated arrival time at each checkpoint.
 - **Risk per checkpoint** from the wind / rain / snow thresholds and the load rules.
+- **Driving conditions** at each checkpoint, shown but never scored: sky, temperature, gusts,
+  visibility and the wind across the road (from its direction and the road's heading). Flags for a
+  crosswind of 25+ mph (the brief's Moderate wind), ice risk (≤ 32 °F with rain or snow) and
+  visibility under 1 mile. Same Open-Meteo request, 10 fields.
+- **Trip briefing**: what changes along the selected route, in driving order ("8:10 PM · mile
+  120 · Rain begins"), from the same checkpoints as the map and table; click a line to see it.
 - **Safety grade** per route: a 0–100 score and A–F grade, so routes compare at a glance.
 - **Best time to leave**: if leaving within the next 24 h avoids High-or-worse weather, the plan
   says so ("Safer to leave 5 h later") and replans with one click.

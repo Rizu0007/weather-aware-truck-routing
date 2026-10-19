@@ -56,7 +56,14 @@ export function HeatmapControls({
     setHour(next);
     onHourChange(next);
   }
-  const playback = useHeatmapPlayback(hours, hour, show);
+  // The hour the truck arrives: playback stops there once, so the trip plays as one story;
+  // play again to see the rest of the forecast.
+  const start = heatmap ? Date.parse(heatmap.start) : 0;
+  const arrivalHour =
+    heatmap && route
+      ? Math.min(hours - 1, Math.ceil((Date.parse(route.arrival) - start) / 3_600_000))
+      : null;
+  const playback = useHeatmapPlayback(hours, hour, show, arrivalHour);
   // Low cells are clear on the map, so say when an hour has nothing to show.
   const riskyCells = useMemo(
     () =>
@@ -180,6 +187,15 @@ export function HeatmapControls({
                 show(next);
               }}
               onValueCommit={([next]) => onHourCommit(next)}
+              span={
+                arrivalHour
+                  ? {
+                      from: 0,
+                      to: arrivalHour,
+                      label: `Truck on the road · arrives +${arrivalHour} h`,
+                    }
+                  : undefined
+              }
             />
             <p aria-hidden="true" className="shrink-0 text-sm whitespace-nowrap tabular-nums">
               <span className="font-semibold">+{hour} h</span>{" "}

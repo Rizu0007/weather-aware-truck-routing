@@ -43,6 +43,41 @@ def test_wind_direction_is_read_when_present():
 
 
 @responses.activate
+def test_driver_information_is_read_and_converted_when_present():
+    body = load_sample("open_meteo_single_location")
+    body["hourly_units"] |= {"wind_gusts_10m": "km/h", "temperature_2m": "°C", "visibility": "m"}
+    body["hourly"] |= {
+        "wind_gusts_10m": [16.09344, None, 0],
+        "temperature_2m": [0, -10, None],
+        "visibility": [1609.344, 24000, None],
+        "weather_code": [3, 61, None],
+        "precipitation_probability": [10, 80, None],
+    }
+    responses.get(URL, json=body)
+
+    [series] = hourly([DALLAS], SAMPLE_START, 3)
+
+    assert series.gust_mph == pytest.approx([10, None, 0])
+    assert series.temperature_f == pytest.approx([32, 14, None])
+    assert series.visibility_mi[0] == pytest.approx(1)
+    assert series.weather_code == [3, 61, None]
+    assert series.precip_probability == [10, 80, None]
+
+
+@responses.activate
+def test_driver_information_in_an_unknown_unit_is_left_out_not_an_error():
+    body = load_sample("open_meteo_single_location")
+    body["hourly_units"] |= {"visibility": "furlongs"}
+    body["hourly"]["visibility"] = [1, 2, 3]
+    responses.get(URL, json=body)
+
+    [series] = hourly([DALLAS], SAMPLE_START, 3)
+
+    assert series.visibility_mi is None
+    assert series.wind_mph == [6.2, 5.9, 2.4]
+
+
+@responses.activate
 def test_multi_location_list_response_keeps_request_order():
     responses.get(URL, json=load_sample("open_meteo_multi_location"))
 
@@ -66,7 +101,11 @@ def test_request_asks_for_mph_inches_utc_and_an_inclusive_window():
     # Rounded down to the hour; end_hour is inclusive, so 3 hours end at 23:00.
     assert params["start_hour"] == "2026-10-17T21:00"
     assert params["end_hour"] == "2026-10-17T23:00"
-    assert params["hourly"] == "wind_speed_10m,rain,showers,snowfall,wind_direction_10m"
+    assert params["hourly"] == (
+        "wind_speed_10m,rain,showers,snowfall,wind_direction_10m,"
+        "wind_gusts_10m,temperature_2m,visibility,weather_code,precipitation_probability"
+    )
+    assert params["temperature_unit"] == "fahrenheit"
     assert "apikey" not in params
 
 
@@ -252,3 +291,16 @@ def test_per_minute_limit_keeps_the_generic_busy_error():
 
     assert "limit" not in info.value.extra
     assert info.value.extra["retry_after"] == 60
+
+
+@responses.activate
+def test_read_timeout_grows_with_the_batch_and_is_capped(monkeypatch):
+    monkeypatch.setattr(open_meteo, "BATCH_SIZE", 100)
+    mock_forecast()
+
+    hourly([(-100 + i * 0.1, 35.0) for i in range(5)], SAMPLE_START, 3)
+    hourly([(-80 + i * 0.1, 40.0) for i in range(100)], SAMPLE_START, 3)
+
+    small, large = (call.request.req_kwargs["timeout"] for call in responses.calls)
+    assert small == (3.05, open_meteo.READ_TIMEOUT_S + 5 * open_meteo.READ_TIMEOUT_PER_LOCATION_S)
+    assert large == (3.05, open_meteo.MAX_READ_TIMEOUT_S)

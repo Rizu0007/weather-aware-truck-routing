@@ -13,6 +13,7 @@ import { Recommendation } from "@/components/features/results/recommendation";
 import { RiskInfoPanel } from "@/components/features/results/risk-info-panel";
 import { RiskProfile } from "@/components/features/results/risk-profile";
 import { RouteCardList } from "@/components/features/results/route-card-list";
+import { TripBriefing } from "@/components/features/results/trip-briefing";
 import { TripForm } from "@/components/features/trip-form/trip-form";
 import { TripSummary } from "@/components/features/trip-form/trip-summary";
 import { Alert } from "@/components/ui/alert";
@@ -41,11 +42,6 @@ const HOW_IT_WORKS = [
     "Compare risk on the map, play the next 48 hours of weather, take the recommended route.",
   ],
 ] as const;
-
-/** Height of a panel floating over the map; 0 when the layout puts it outside (small screens). */
-function coveredHeight(panel: HTMLElement | null): number {
-  return panel && getComputedStyle(panel).position === "absolute" ? panel.offsetHeight + 12 : 0;
-}
 
 // MapLibre is the largest dependency: load it after the form, in its own chunk.
 const loadMap = () => import("@/components/features/map/map-view");
@@ -79,10 +75,10 @@ export function PlannerPage() {
   const heatmap = useHeatmap(data);
   const mapHandle = useRef<MapHandle>(null);
   const legendPanel = useRef<HTMLDivElement>(null);
-  const timelinePanel = useRef<HTMLDivElement>(null);
   const [heatmapVisible, setHeatmapVisible] = useState(true);
   // Off by default for users who asked their system for less motion.
   const [weatherMotion, setWeatherMotion] = useState(() => !prefersReducedMotion());
+  const legendMotion = weatherMotion && heatmapVisible && Boolean(heatmap.data);
   const checkpoint = useCheckpointSelection(`${plan.dataUpdatedAt}:${selected?.id}`);
 
   // Fetch the map code while the user fills in the form.
@@ -111,7 +107,7 @@ export function PlannerPage() {
   }, [plan.isSuccess, plan.dataUpdatedAt]);
 
   return (
-    <div className="mx-auto grid w-full max-w-screen-2xl flex-1 items-start gap-6 px-4 py-6 lg:grid-cols-[400px_1fr]">
+    <div className="mx-auto grid w-full max-w-screen-2xl flex-1 items-start gap-6 px-4 py-6 lg:grid-cols-[360px_1fr]">
       <title>Weather-Aware Truck Routing</title>
 
       <aside aria-label="Trip and routes" className="flex flex-col gap-4">
@@ -182,6 +178,15 @@ export function PlannerPage() {
                 selectedId={selected.id}
                 onSelect={setRouteId}
               />
+              {trip && (
+                <TripBriefing
+                  route={selected}
+                  from={trip.origin.label}
+                  to={trip.destination.label}
+                  activeMile={checkpoint.activeMile}
+                  onActivate={checkpoint.activate}
+                />
+              )}
             </>
           )}
         </section>
@@ -190,11 +195,11 @@ export function PlannerPage() {
 
       {/* Large screens: the map column stays in view while the left side scrolls, so table,
           strip and timeline always show their effect on the map. */}
-      <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-18 lg:h-[calc(100dvh-5.5rem)]">
+      <div className="flex min-w-0 flex-col gap-4">
         {!trip && (
           <section
             aria-labelledby="how-heading"
-            className="relative flex min-h-80 flex-col justify-end overflow-hidden rounded-card border border-border bg-surface lg:flex-1"
+            className="relative flex min-h-80 flex-col justify-end overflow-hidden rounded-card border border-border bg-surface lg:h-[68vh]"
           >
             {/* The product's own map, so the first screen already looks like it. */}
             <div className="absolute inset-0">
@@ -230,14 +235,12 @@ export function PlannerPage() {
           </section>
         )}
         {trip && plan.isFetching && (
-          <Skeleton className="h-[55svh] min-h-80 rounded-card lg:h-auto lg:flex-1" />
+          <Skeleton className="h-[60svh] min-h-80 rounded-card lg:h-[68vh] lg:min-h-[28rem]" />
         )}
         {data && selected && (
-          <section
-            aria-label="Map"
-            className="relative flex flex-col gap-4 lg:min-h-[22rem] lg:flex-1"
-          >
-            <div className="h-[55svh] min-h-80 lg:h-auto lg:min-h-0 lg:flex-1">
+          <section aria-label="Map" className="flex flex-col gap-4">
+            {/* The main feature: as large as fits with the timeline still in view below it. */}
+            <div className="relative h-[60svh] min-h-80 lg:h-[68vh] lg:min-h-[28rem]">
               <Suspense
                 fallback={
                   <Skeleton className="flex h-full items-center justify-center rounded-card text-sm text-muted-foreground" />
@@ -255,45 +258,38 @@ export function PlannerPage() {
                   hoverMile={checkpoint.hoverMile}
                   onSelectRoute={setRouteId}
                   onActivateCheckpoint={checkpoint.activate}
-                  fitInsets={() => ({
-                    top: coveredHeight(legendPanel.current),
-                    bottom: coveredHeight(timelinePanel.current),
-                  })}
+                  fitInsets={() => ({ top: legendPanel.current?.offsetHeight ?? 0, bottom: 0 })}
                 />
               </Suspense>
+              {/* On the map only where it's wide enough; on phones it would cover popups. */}
+              <div
+                ref={legendPanel}
+                className="absolute top-3 left-3 z-10 hidden max-w-[calc(100%-5rem)] rounded-card border border-border bg-map-panel px-3 py-2 shadow-card lg:block"
+              >
+                <HeatmapLegend motion={legendMotion} />
+              </div>
             </div>
-            <div
-              ref={legendPanel}
-              className="absolute top-3 left-3 z-10 max-w-[calc(100%-5rem)] rounded-card border border-border bg-map-panel px-3 py-2 shadow-card"
-            >
-              <HeatmapLegend motion={weatherMotion && heatmapVisible && Boolean(heatmap.data)} />
-            </div>
-            <div ref={timelinePanel} className="lg:absolute lg:inset-x-3 lg:bottom-3 lg:z-10">
-              <HeatmapControls
-                // A new plan starts from its own hour (from the URL, else 0).
-                key={plan.dataUpdatedAt}
-                heatmap={heatmap.data}
-                loading={heatmap.isFetching}
-                error={heatmap.error}
-                onRetry={() => void heatmap.refetch()}
-                visible={heatmapVisible}
-                onVisibleChange={setHeatmapVisible}
-                route={selected}
-                motion={weatherMotion}
-                onMotionChange={setWeatherMotion}
-                initialHour={hour}
-                onHourChange={(next) => mapHandle.current?.setHeatmapHour(next)}
-                onHourCommit={setHour}
-                className="lg:bg-map-panel lg:p-3 lg:shadow-card"
-              />
-            </div>
+            <HeatmapLegend motion={legendMotion} className="-mt-2 lg:hidden" />
+            <HeatmapControls
+              // A new plan starts from its own hour (from the URL, else 0).
+              key={plan.dataUpdatedAt}
+              heatmap={heatmap.data}
+              loading={heatmap.isFetching}
+              error={heatmap.error}
+              onRetry={() => void heatmap.refetch()}
+              visible={heatmapVisible}
+              onVisibleChange={setHeatmapVisible}
+              route={selected}
+              motion={weatherMotion}
+              onMotionChange={setWeatherMotion}
+              initialHour={hour}
+              onHourChange={(next) => mapHandle.current?.setHeatmapHour(next)}
+              onHourCommit={setHour}
+            />
           </section>
         )}
         {data && selected && (
-          <section
-            aria-labelledby="checkpoints-heading"
-            className="flex flex-col gap-3 lg:max-h-[38%] lg:min-h-0"
-          >
+          <section aria-labelledby="checkpoints-heading" className="flex flex-col gap-3">
             <h2 id="checkpoints-heading" className="text-base font-semibold">
               Checkpoints on route {selected.id}
               <span className="ml-2 text-sm font-normal text-muted-foreground">
@@ -311,7 +307,6 @@ export function PlannerPage() {
               activeMile={checkpoint.activeMile}
               onActivate={checkpoint.activate}
               onHover={checkpoint.hover}
-              className="lg:max-h-none lg:min-h-0 lg:flex-1"
             />
           </section>
         )}

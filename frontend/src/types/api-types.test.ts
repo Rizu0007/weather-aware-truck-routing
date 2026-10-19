@@ -28,6 +28,7 @@ const ROUTE_KEYS = [
   "via_town",
 ];
 const CHECKPOINT_KEYS = [
+  "conditions",
   "covers",
   "eta",
   "lat",

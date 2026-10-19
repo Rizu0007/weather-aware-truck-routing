@@ -127,11 +127,19 @@ def test_requests_one_window_covering_the_longest_trip():
 
     plan(departure=start)
 
-    [weather_call] = [c for c in responses.calls if "open-meteo" in c.request.url]
-    params = weather_call.request.params
-    assert params["start_hour"] == start.strftime("%Y-%m-%dT%H:00")
+    # Every batch asks for the same window.
+    windows = {
+        (c.request.params["start_hour"], c.request.params["end_hour"])
+        for c in responses.calls
+        if "open-meteo" in c.request.url
+    }
     # Longest route is ~5.5 h: ceil + 2 = 8 hours, plus 24 for later departures.
-    assert params["end_hour"] == (start + timedelta(hours=31)).strftime("%Y-%m-%dT%H:00")
+    assert windows == {
+        (
+            start.strftime("%Y-%m-%dT%H:00"),
+            (start + timedelta(hours=31)).strftime("%Y-%m-%dT%H:00"),
+        )
+    }
 
 
 @responses.activate
@@ -226,10 +234,10 @@ def test_no_advice_when_the_forecast_ends_before_any_later_departure():
     result = plan(departure=last_hour)
 
     assert result.departure_advice is None
-    [weather_call] = [c for c in responses.calls if "open-meteo" in c.request.url]
-    assert weather_call.request.params["end_hour"] <= (last_hour + timedelta(hours=8)).strftime(
-        "%Y-%m-%dT%H:00"
-    )
+    weather_calls = [c for c in responses.calls if "open-meteo" in c.request.url]
+    latest = (last_hour + timedelta(hours=8)).strftime("%Y-%m-%dT%H:00")
+    assert weather_calls
+    assert all(c.request.params["end_hour"] <= latest for c in weather_calls)
 
 
 @responses.activate

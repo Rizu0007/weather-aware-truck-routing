@@ -6,10 +6,12 @@ import { HeatmapControls } from "@/components/features/heatmap/heatmap-controls"
 import { HeatmapLegend } from "@/components/features/heatmap/heatmap-legend";
 import { ApiError } from "@/api/client";
 import heatmapFixture from "@/test/fixtures/heatmap.json";
-import type { Heatmap } from "@/types/api";
+import tripPlanFixture from "@/test/fixtures/trip-plan.json";
+import type { Heatmap, TripPlan } from "@/types/api";
 import { describeWeather } from "@/utils/weather";
 
 const HEATMAP: Heatmap = heatmapFixture;
+const PLAN = tripPlanFixture as TripPlan;
 
 function renderControls(props: Partial<Parameters<typeof HeatmapControls>[0]> = {}) {
   const handlers = {
@@ -60,6 +62,25 @@ describe("HeatmapControls", () => {
     renderControls({ initialHour: 12 });
 
     expect(slider()).toHaveAttribute("aria-valuenow", "12");
+  });
+
+  it("pauses when the truck arrives, and plays on from there when played again", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const route = PLAN.routes[0];
+    const arrival = Math.ceil((Date.parse(route.arrival) - Date.parse(HEATMAP.start)) / 3_600_000);
+    const { onHourChange } = renderControls({ route, initialHour: arrival - 1 });
+    expect(screen.getByText(`Truck on the road · arrives +${arrival} h`)).toBeInTheDocument();
+
+    const play = () =>
+      userEvent.click(screen.getByRole("button", { name: "Play through the hours" }));
+    await play();
+    await act(() => vi.advanceTimersByTimeAsync(1_000));
+    expect(onHourChange).toHaveBeenLastCalledWith(arrival);
+    expect(screen.getByRole("button", { name: "Play through the hours" })).toBeInTheDocument();
+
+    await play();
+    await act(() => vi.advanceTimersByTimeAsync(1_000));
+    expect(onHourChange).toHaveBeenLastCalledWith(arrival + 1);
   });
 
   it("plays through the hours, looping, and pausing keeps the hour", async () => {

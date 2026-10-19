@@ -1,9 +1,10 @@
+import { Check } from "lucide-react";
+
 import { RiskStrip } from "@/components/features/results/risk-strip";
 import { Badge, type BadgeVariant } from "@/components/ui/badge";
-import { RISK_BG, RISK_LABELS, RISK_LEVELS } from "@/constants/risk";
-import type { PlannedRoute, RouteSummary, SafetyGrade } from "@/types/api";
+import type { PlannedRoute, SafetyGrade } from "@/types/api";
 import { cn } from "@/utils/cn";
-import { formatDateTime, formatDuration, formatMiles } from "@/utils/format";
+import { formatClock, formatDuration, formatMiles } from "@/utils/format";
 
 const GRADE_BADGE: Record<SafetyGrade, BadgeVariant> = {
   A: "low",
@@ -13,9 +14,6 @@ const GRADE_BADGE: Record<SafetyGrade, BadgeVariant> = {
   F: "no_travel",
 };
 
-// Literal class names, so Tailwind can find them.
-const COLUMNS = ["grid-cols-1", "grid-cols-2", "grid-cols-3"];
-
 interface RouteCardListProps {
   routes: PlannedRoute[];
   recommendedId: string;
@@ -23,39 +21,22 @@ interface RouteCardListProps {
   onSelect: (id: string) => void;
 }
 
-/** Routes side by side to compare at a glance, with the selected one's detail below.
- *  Native radios styled as cards: arrow keys and screen readers work without extra code. */
+/** Native radios styled as cards: arrow keys and screen readers work without extra code. */
 export function RouteCardList({ routes, recommendedId, selectedId, onSelect }: RouteCardListProps) {
   const recommended = routes.find((route) => route.id === recommendedId) ?? routes[0];
-  const selected = routes.find((route) => route.id === selectedId) ?? routes[0];
   return (
     <fieldset className="flex flex-col gap-3">
       <legend className="mb-2 text-sm font-semibold">Routes, best first</legend>
-      <div className={cn("grid gap-2", COLUMNS[routes.length - 1] ?? "grid-cols-3")}>
-        {routes.map((route) => (
-          <RouteCard
-            key={route.id}
-            route={route}
-            recommended={route.id === recommended.id}
-            slowerBy={route.duration_s - recommended.duration_s}
-            selected={route.id === selected.id}
-            onSelect={() => onSelect(route.id)}
-          />
-        ))}
-      </div>
-      <div className="flex flex-col gap-2 rounded-card border border-border bg-surface p-3">
-        <p className="text-sm">
-          <span className="font-semibold">Route {selected.id}</span>
-          {selected.via_town && (
-            <span className="text-muted-foreground"> via {selected.via_town}</span>
-          )}
-          <span className="text-muted-foreground">
-            {" "}
-            · arrives {formatDateTime(selected.arrival)}
-          </span>
-        </p>
-        <RiskStrip summary={selected.summary} />
-      </div>
+      {routes.map((route) => (
+        <RouteCard
+          key={route.id}
+          route={route}
+          recommended={route.id === recommended.id}
+          slowerBy={route.duration_s - recommended.duration_s}
+          selected={route.id === selectedId}
+          onSelect={() => onSelect(route.id)}
+        />
+      ))}
     </fieldset>
   );
 }
@@ -74,9 +55,11 @@ function RouteCard({ route, recommended, slowerBy, selected, onSelect }: RouteCa
   return (
     <label
       className={cn(
-        "flex min-w-0 cursor-pointer flex-col gap-2 rounded-card border bg-surface p-3 shadow-card transition-colors",
+        "relative flex cursor-pointer flex-col gap-2 rounded-card border-2 px-3 py-2.5 shadow-card transition-colors",
         "has-focus-visible:ring-2 has-focus-visible:ring-ring/40",
-        selected ? "border-primary bg-secondary/40" : "border-border hover:border-muted-foreground",
+        selected
+          ? "border-primary bg-secondary/50 shadow-glow"
+          : "border-border bg-surface hover:border-muted-foreground",
       )}
     >
       <input
@@ -87,53 +70,46 @@ function RouteCard({ route, recommended, slowerBy, selected, onSelect }: RouteCa
         onChange={onSelect}
         className="sr-only"
       />
-      <span className="flex flex-wrap items-center justify-between gap-1">
-        <span className="font-semibold">Route {route.id}</span>
-        {recommended && <Badge variant="primary">Best</Badge>}
-      </span>
-      <span>
-        <Badge variant={GRADE_BADGE[summary.grade]}>
+      <span className="flex items-center justify-between gap-2">
+        <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <span
+            aria-hidden="true"
+            className={cn(
+              "flex size-5 shrink-0 items-center justify-center rounded-full text-xs font-bold",
+              selected ? "bg-primary text-primary-foreground" : "bg-surface-raised",
+            )}
+          >
+            {selected ? <Check className="size-3.5" strokeWidth={3} /> : route.id}
+          </span>
+          <span className="font-semibold">Route {route.id}</span>
+          {recommended && <Badge variant="primary">Best</Badge>}
+          {selected && <span className="text-xs font-medium text-primary">On the map</span>}
+        </span>
+        <Badge variant={GRADE_BADGE[summary.grade]} className="shrink-0">
           <span aria-hidden="true">
-            {summary.grade} · {summary.safety_score}
+            Grade {summary.grade} · {summary.safety_score}
           </span>
           <span className="sr-only">
             grade {summary.grade}, score {summary.safety_score} of 100
           </span>
         </Badge>
       </span>
-      <span className="flex flex-col text-sm tabular-nums">
-        <span className="font-medium">{formatDuration(route.duration_s)}</span>
-        <span className="text-xs text-muted-foreground">
-          {formatMiles(route.distance_mi)}
-          {!recommended && Math.abs(slowerBy) >= 60 && (
-            <> · {`${slowerBy > 0 ? "+" : "−"}${formatDuration(Math.abs(slowerBy))}`}</>
-          )}
+      {/* One line instead of labelled columns: time, then what it costs against the best. */}
+      <span className="flex flex-wrap items-baseline gap-x-1.5 text-sm tabular-nums">
+        <span className="font-semibold">{formatDuration(route.duration_s)}</span>
+        {!recommended && Math.abs(slowerBy) >= 60 && (
+          <span className="text-xs text-warning">
+            {`${slowerBy > 0 ? "+" : "−"}${formatDuration(Math.abs(slowerBy))}`}
+          </span>
+        )}
+        <span className="text-muted-foreground">
+          · {formatMiles(route.distance_mi)} · arrives {formatClock(route.arrival)}
         </span>
       </span>
-      <RiskBar summary={summary} />
+      {route.via_town && (
+        <span className="-mt-1 truncate text-xs text-muted-foreground">via {route.via_town}</span>
+      )}
+      <RiskStrip summary={summary} />
     </label>
-  );
-}
-
-/** Just the coloured bar; the selected route's detail below names the miles. */
-function RiskBar({ summary }: { summary: RouteSummary }) {
-  const levels = RISK_LEVELS.filter((level) => summary.miles_by_level[level] > 0);
-  const total = levels.reduce((sum, level) => sum + summary.miles_by_level[level], 0);
-  return (
-    <>
-      <span
-        className="flex h-1.5 overflow-hidden rounded-pill bg-surface-raised"
-        aria-hidden="true"
-      >
-        {levels.map((level) => (
-          <span
-            key={level}
-            className={RISK_BG[level]}
-            style={{ width: `${(summary.miles_by_level[level] / total) * 100}%` }}
-          />
-        ))}
-      </span>
-      <span className="sr-only">worst risk {RISK_LABELS[summary.max_level]}</span>
-    </>
   );
 }
