@@ -77,4 +77,83 @@
   border: 3px solid var(--route-casing, #0d1a2e);
   box-shadow: 0 2px 8px rgb(0 0 0 / 0.45);
   pointer-events: none;
+  z-index: 2;
+}
+
+/* Popups over the route labels and the truck. */
+.maplibregl-popup {
+  z-index: 3;
+}
+
+/* A route's summary on the map; click to select it. */
+.route-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px 3px 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--map-panel);
+  color: var(--foreground);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  box-shadow: var(--shadow-card);
+  cursor: pointer;
+  opacity: 0.85;
+  z-index: 1;
+}
+
+.route-label:hover,
+.route-label-selected {
+  opacity: 1;
+}
+
+.route-label-selected {
+  border-color: var(--primary);
+}
+
+.route-label-id {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 9999px;
+  background: var(--surface-raised);
+  font-weight: 700;
+}
+
+.route-label-selected .route-label-id {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.route-label-best {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.route-label-grade {
+  padding: 3px 7px;
+  border-radius: var(--radius-pill);
+  color: var(--risk-foreground);
+  font-weight: 700;
+}
+
+.route-label[data-grade="A"] .route-label-grade {
+  background: var(--risk-low);
+}
+.route-label[data-grade="B"] .route-label-grade {
+  background: var(--risk-moderate);
+}
+.route-label[data-grade="C"] .route-label-grade {
+  background: var(--risk-high);
+}
+.route-label[data-grade="D"] .route-label-grade {
+  background: var(--risk-severe);
+}
+.route-label[data-grade="F"] .route-label-grade {
+  background: var(--risk-no-travel);
 }

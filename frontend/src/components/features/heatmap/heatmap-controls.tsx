@@ -2,7 +2,6 @@ import { Pause, Play } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { ApiError } from "@/api/client";
-import { HeatmapLegend } from "@/components/features/heatmap/heatmap-legend";
 import { truckAt } from "@/components/features/map/map-data";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +10,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { HEATMAP_MAX_HOUR } from "@/constants/limits";
 import { useHeatmapPlayback } from "@/hooks/use-heatmap-playback";
 import type { Heatmap, PlannedRoute } from "@/types/api";
+import { cn } from "@/utils/cn";
 import { formatDateTime } from "@/utils/format";
 import { describeWeather, weatherCounts } from "@/utils/weather";
 
@@ -31,6 +31,7 @@ interface HeatmapControlsProps {
   onHourChange: (hour: number) => void;
   /** When scrubbing ends: e.g. save the hour in the URL. */
   onHourCommit: (hour: number) => void;
+  className?: string;
 }
 
 export function HeatmapControls({
@@ -46,6 +47,7 @@ export function HeatmapControls({
   initialHour,
   onHourChange,
   onHourCommit,
+  className,
 }: HeatmapControlsProps) {
   const [hour, setHour] = useState(initialHour);
   const hours = heatmap?.hours ?? HEATMAP_MAX_HOUR + 1;
@@ -86,18 +88,21 @@ export function HeatmapControls({
   return (
     <section
       aria-labelledby="heatmap-heading"
-      className="flex flex-col gap-3 rounded-card border border-border bg-surface p-4"
+      className={cn(
+        "flex flex-col gap-2.5 rounded-card border border-border bg-surface p-4",
+        className,
+      )}
     >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 id="heatmap-heading" className="text-base font-semibold">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <h2 id="heatmap-heading" className="text-sm font-semibold">
           Forecast timeline
-          <span className="ml-2 text-sm font-normal text-muted-foreground">
-            drag to see the weather hour by hour, and where your truck is
+          <span className="ml-2 font-normal text-muted-foreground">
+            the weather hour by hour, and where your truck is
           </span>
         </h2>
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
           {onMotionChange && (
-            <label className="flex cursor-pointer items-center gap-2 text-sm has-disabled:cursor-default has-disabled:opacity-50">
+            <label className="flex cursor-pointer items-center gap-2 has-disabled:cursor-default has-disabled:opacity-50">
               <input
                 type="checkbox"
                 checked={motion}
@@ -108,7 +113,7 @@ export function HeatmapControls({
               Moving wind & rain
             </label>
           )}
-          <label className="flex cursor-pointer items-center gap-2 text-sm">
+          <label className="flex cursor-pointer items-center gap-2">
             <input
               type="checkbox"
               checked={visible}
@@ -176,14 +181,14 @@ export function HeatmapControls({
               }}
               onValueCommit={([next]) => onHourCommit(next)}
             />
-          </div>
-          <div className="flex flex-col gap-0.5 text-sm tabular-nums">
-            <p aria-hidden="true">
+            <p aria-hidden="true" className="shrink-0 text-sm whitespace-nowrap tabular-nums">
               <span className="font-semibold">+{hour} h</span>{" "}
               <span className="text-muted-foreground">· {time}</span>
             </p>
+          </div>
+          <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs tabular-nums">
             {truckText && (
-              <p className="text-primary">
+              <p className="font-medium text-primary">
                 <span aria-hidden="true">● </span>
                 {truckText[0].toUpperCase() + truckText.slice(1)}
               </p>
@@ -196,7 +201,6 @@ export function HeatmapControls({
               {describeWeather(weather[hour] ?? { wind: 0, rain: 0, snow: 0 })}
             </p>
           </div>
-          <HeatmapLegend />
           {heatmap.warnings.map((warning) => (
             <p key={warning} className="text-xs text-muted-foreground">
               {warning}

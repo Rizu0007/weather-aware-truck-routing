@@ -9,6 +9,7 @@ export const SOURCES = {
   segments: "risk-segments",
   routes: "routes",
   checkpoints: "checkpoints",
+  otherCheckpoints: "other-checkpoints",
   endpoints: "endpoints",
 } as const;
 
@@ -16,6 +17,7 @@ export const LAYERS = {
   casing: "route-casing",
   risk: "route-risk",
   hit: "route-hit",
+  otherCheckpoints: "other-checkpoints",
   checkpoints: "checkpoints",
   endpoints: "endpoints",
 } as const;
@@ -85,6 +87,20 @@ export function routeLayers(selectedId: string): AddLayerObject[] {
       type: "line",
       source: SOURCES.routes,
       paint: { "line-width": 18, "line-opacity": 0 },
+    },
+    {
+      // Smaller and faded; clicking one selects its route through the hit layer.
+      id: LAYERS.otherCheckpoints,
+      type: "circle",
+      source: SOURCES.otherCheckpoints,
+      paint: {
+        "circle-color": levelColor(colors),
+        "circle-opacity": 0.7,
+        "circle-stroke-color": casing,
+        "circle-stroke-width": 1.5,
+        "circle-stroke-opacity": 0.7,
+        "circle-radius": expression<number>(["interpolate", ["linear"], ["zoom"], 4, 2.5, 9, 4]),
+      },
     },
     {
       id: LAYERS.checkpoints,

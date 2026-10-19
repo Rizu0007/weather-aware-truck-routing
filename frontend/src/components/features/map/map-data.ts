@@ -42,6 +42,57 @@ export function checkpointPoints(route: PlannedRoute): FeatureCollection<Point> 
   return { type: "FeatureCollection", features };
 }
 
+/** Checkpoints of the routes not selected, drawn faded so every route shows where it was checked. */
+export function otherCheckpointPoints(
+  routes: PlannedRoute[],
+  selectedId: string,
+): FeatureCollection<Point> {
+  const features: PointFeature[] = routes
+    .filter((route) => route.id !== selectedId)
+    .flatMap((route) =>
+      route.checkpoints.map((checkpoint) => ({
+        type: "Feature",
+        geometry: { type: "Point", coordinates: [checkpoint.lon, checkpoint.lat] },
+        properties: { routeId: route.id, level: checkpoint.level },
+      })),
+    );
+  return { type: "FeatureCollection", features };
+}
+
+const LABEL_CANDIDATES = 100;
+const LABEL_NEIGHBOURS = 400;
+
+/** A point on `route` as far as possible from the others, so its label never sits on a shared road. */
+export function labelPoint(route: PlannedRoute, others: PlannedRoute[]): LonLat {
+  const line = route.geometry;
+  // The middle 80%: near the ends every route shares the same streets.
+  const from = Math.floor(line.length * 0.1);
+  const to = Math.max(from + 1, Math.ceil(line.length * 0.9));
+  const candidates = every(line.slice(from, to), LABEL_CANDIDATES);
+  const neighbours = others.flatMap((other) => every(other.geometry, LABEL_NEIGHBOURS));
+  if (!neighbours.length) return line[Math.floor(line.length / 2)];
+
+  let best = candidates[0];
+  let bestDistance = -1;
+  for (const point of candidates) {
+    const nearest = Math.min(...neighbours.map((other) => flatDistanceSq(point, other)));
+    if (nearest > bestDistance) [best, bestDistance] = [point, nearest];
+  }
+  return best;
+}
+
+/** About `count` evenly spaced points of a line. */
+function every(line: LonLat[], count: number): LonLat[] {
+  const step = Math.max(1, Math.floor(line.length / count));
+  return line.filter((_, index) => index % step === 0);
+}
+
+/** Squared distance in degrees, longitude scaled by latitude: enough to compare nearby points. */
+function flatDistanceSq([lon1, lat1]: LonLat, [lon2, lat2]: LonLat): number {
+  const dx = (lon2 - lon1) * Math.cos((((lat1 + lat2) / 2) * Math.PI) / 180);
+  return dx * dx + (lat2 - lat1) ** 2;
+}
+
 export function endpoints(route: PlannedRoute): FeatureCollection<Point> {
   const first = route.geometry[0];
   const last = route.geometry[route.geometry.length - 1];

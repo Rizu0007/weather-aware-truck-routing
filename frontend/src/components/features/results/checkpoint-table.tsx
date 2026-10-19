@@ -23,6 +23,7 @@ interface CheckpointTableProps {
   activeMile?: number | null;
   onActivate?: (mile: number) => void;
   onHover?: (mile: number | null) => void;
+  className?: string;
 }
 
 /** Every checkpoint of the selected route: the same data as the map, in text. */
@@ -31,6 +32,7 @@ export function CheckpointTable({
   activeMile = null,
   onActivate,
   onHover,
+  className,
 }: CheckpointTableProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const activeRow = useRef<HTMLTableRowElement>(null);
@@ -50,7 +52,10 @@ export function CheckpointTable({
   return (
     <div
       ref={scroller}
-      className="relative max-h-[28rem] overflow-auto rounded-card border border-border"
+      className={cn(
+        "relative max-h-[28rem] overflow-auto rounded-card border border-border",
+        className,
+      )}
     >
       <table className="w-full text-left text-sm tabular-nums">
         <caption className="sr-only">

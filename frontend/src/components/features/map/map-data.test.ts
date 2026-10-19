@@ -5,12 +5,14 @@ import {
   checkpointIndex,
   checkpointPoints,
   endpoints,
+  labelPoint,
+  otherCheckpointPoints,
   riskSegments,
   routeLines,
   truckAt,
 } from "@/components/features/map/map-data";
 import tripPlan from "@/test/fixtures/trip-plan.json";
-import type { TripPlan } from "@/types/api";
+import type { LonLat, PlannedRoute, TripPlan } from "@/types/api";
 
 const PLAN = tripPlan as TripPlan;
 const ROUTE_A = PLAN.routes.find((route) => route.id === "A")!;
@@ -90,5 +92,38 @@ describe("truckAt", () => {
   it("sits on the drawn road: the origin at mile 0, the last vertex on arrival", () => {
     expect(truckAt(route, at(first.eta)).lonLat).toEqual(route.geometry[0]);
     expect(truckAt(route, at(last.eta)).lonLat).toEqual(route.geometry[route.geometry.length - 1]);
+  });
+});
+
+describe("route labels and other checkpoints", () => {
+  const line = (points: LonLat[]) => ({ id: "X", geometry: points }) as PlannedRoute;
+
+  it("labels a route where it is farthest from the others", () => {
+    // Both start and end together; only the first bows north, around x = 5.
+    const shared: LonLat[] = Array.from({ length: 11 }, (_, x) => [x, 0]);
+    const bowed: LonLat[] = shared.map(([x]) => [x, x > 2 && x < 8 ? 3 - Math.abs(x - 5) : 0]);
+
+    expect(labelPoint(line(bowed), [line(shared)])).toEqual([5, 3]);
+  });
+
+  it("labels a lone route at its middle", () => {
+    expect(
+      labelPoint(
+        line([
+          [0, 0],
+          [1, 0],
+          [2, 0],
+        ]),
+        [],
+      ),
+    ).toEqual([1, 0]);
+  });
+
+  it("shows every other route's checkpoints, and none of the selected one", () => {
+    const { features } = otherCheckpointPoints(PLAN.routes, "A");
+    const others = PLAN.routes.filter((route) => route.id !== "A");
+
+    expect(features).toHaveLength(others.reduce((n, route) => n + route.checkpoints.length, 0));
+    expect(features.every((f) => f.properties?.routeId !== "A")).toBe(true);
   });
 });

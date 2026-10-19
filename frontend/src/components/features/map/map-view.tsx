@@ -2,6 +2,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import "@/components/features/map/map-view.css";
 
 import {
+  AttributionControl,
   LngLatBounds,
   Map as MapLibreMap,
   Marker,
@@ -21,6 +22,8 @@ import {
   checkpointIndex,
   checkpointPoints,
   endpoints,
+  labelPoint,
+  otherCheckpointPoints,
   riskSegments,
   routeLines,
   truckAt,
@@ -35,6 +38,7 @@ import {
 } from "@/components/features/map/map-style";
 import { RiskField } from "@/components/features/map/risk-field";
 import { WeatherFlow } from "@/components/features/map/weather-flow";
+import { formatDuration, formatMiles } from "@/utils/format";
 import { prefersReducedMotion } from "@/utils/motion";
 import type { Heatmap, PlannedRoute } from "@/types/api";
 
@@ -55,6 +59,29 @@ function truckElement(): HTMLElement {
     '<path d="M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/>' +
     '<path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/>' +
     '<circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg>';
+  return element;
+}
+
+/** A route's summary pinned to the map: id, drive time, distance and safety grade.
+ *  Decorative for screen readers; the route cards say the same. */
+function routeLabelElement(route: PlannedRoute, recommended: boolean): HTMLElement {
+  const element = document.createElement("div");
+  element.className = "route-label";
+  element.dataset.grade = route.summary.grade;
+  element.setAttribute("aria-hidden", "true");
+  const part = (className: string, text: string) => {
+    const span = document.createElement("span");
+    span.className = className;
+    span.textContent = text;
+    element.append(span);
+  };
+  part("route-label-id", route.id);
+  if (recommended) part("route-label-best", "Best");
+  part(
+    "route-label-stats",
+    `${formatDuration(route.duration_s)} · ${formatMiles(route.distance_mi)}`,
+  );
+  part("route-label-grade", `${route.summary.grade} ${route.summary.safety_score}`);
   return element;
 }
 
@@ -84,6 +111,8 @@ export interface MapViewProps {
   weatherMotion?: boolean;
   /** Hour shown when the heatmap first appears; later changes go through the handle. */
   initialHour?: number;
+  /** Pixels the page's panels cover at the map's top and bottom, so routes are framed clear of them. */
+  fitInsets?: () => { top: number; bottom: number };
 }
 
 function supportsWebGL(): boolean {
@@ -106,6 +135,7 @@ export default function MapView({
   heatmapVisible = true,
   weatherMotion = false,
   initialHour = 0,
+  fitInsets,
 }: MapViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const map = useRef<MapLibreMap | null>(null);
@@ -127,12 +157,23 @@ export default function MapView({
   }));
 
   // Handlers registered once on the map read the latest props through refs.
-  const latest = useRef({ onSelectRoute, onActivateCheckpoint, selected, heatmap });
+  const latest = useRef({ onSelectRoute, onActivateCheckpoint, selected, heatmap, fitInsets });
   useEffect(() => {
-    latest.current = { onSelectRoute, onActivateCheckpoint, selected, heatmap };
+    latest.current = { onSelectRoute, onActivateCheckpoint, selected, heatmap, fitInsets };
   });
 
+  function fitPadding() {
+    const insets = latest.current.fitInsets?.() ?? { top: 0, bottom: 0 };
+    return {
+      top: FIT_PADDING + insets.top,
+      bottom: FIT_PADDING + insets.bottom,
+      left: FIT_PADDING,
+      right: FIT_PADDING,
+    };
+  }
+
   const truck = useRef<{ marker: Marker; shownAt: number; frame: number } | null>(null);
+  const labels = useRef(new Map<string, Marker>());
 
   /** The truck's time at the slider's hour: from the heatmap's start, else from departure. */
   function truckTime(): number {
@@ -170,13 +211,15 @@ export default function MapView({
       container: container.current,
       style: BASEMAP_STYLE,
       bounds: boundsOf(routes),
-      fitBoundsOptions: { padding: FIT_PADDING },
+      fitBoundsOptions: { padding: fitPadding() },
       // Touch screens: one finger scrolls the page, two move the map. A mouse wheel zooms.
       cooperativeGestures: matchMedia("(pointer: coarse)").matches,
-      attributionControl: { compact: true },
+      // Top-right, under the zoom buttons: the forecast timeline covers the bottom.
+      attributionControl: false,
     });
     map.current = instance;
     instance.addControl(new NavigationControl({ showCompass: false }), "top-right");
+    instance.addControl(new AttributionControl({ compact: true }), "top-right");
     // The basemap style references a few POI icons it doesn't ship; draw them as nothing.
     instance.setMissingStyleImageResolver((id) => {
       if (!instance.hasImage(id)) {
@@ -194,6 +237,10 @@ export default function MapView({
       instance.addSource(SOURCES.segments, { type: "geojson", data: riskSegments(routes) });
       instance.addSource(SOURCES.routes, { type: "geojson", data: routeLines(routes) });
       instance.addSource(SOURCES.checkpoints, { type: "geojson", data: checkpointPoints(route) });
+      instance.addSource(SOURCES.otherCheckpoints, {
+        type: "geojson",
+        data: otherCheckpointPoints(routes, route.id),
+      });
       instance.addSource(SOURCES.endpoints, { type: "geojson", data: endpoints(route) });
       for (const layer of routeLayers(route.id)) instance.addLayer(layer);
       // Under the routes, so they stay readable over any weather.
@@ -256,7 +303,7 @@ export default function MapView({
     void source(instance, SOURCES.segments)?.setData(riskSegments(routes));
     void source(instance, SOURCES.routes)?.setData(routeLines(routes));
     instance.fitBounds(new LngLatBounds(...boundsOf(routes)), {
-      padding: FIT_PADDING,
+      padding: fitPadding(),
       duration: 600,
     });
   }, [loaded, routes]);
@@ -267,6 +314,12 @@ export default function MapView({
     if (!loaded || !instance) return;
     void source(instance, SOURCES.checkpoints)?.setData(checkpointPoints(selected));
     void source(instance, SOURCES.endpoints)?.setData(endpoints(selected));
+    void source(instance, SOURCES.otherCheckpoints)?.setData(
+      otherCheckpointPoints(routes, selected.id),
+    );
+    for (const [id, marker] of labels.current) {
+      marker.getElement().classList.toggle("route-label-selected", id === selected.id);
+    }
     const { casing, risk } = selectionPaint(selected.id);
     instance.setPaintProperty(LAYERS.casing, "line-width", casing["line-width"]);
     instance.setPaintProperty(LAYERS.casing, "line-opacity", casing["line-opacity"]);
@@ -275,7 +328,32 @@ export default function MapView({
     for (const layer of [LAYERS.casing, LAYERS.risk]) {
       instance.setLayoutProperty(layer, "line-sort-key", sortKey(selected.id));
     }
+    // `routes` changes only with `selected` (a new plan selects anew), so it needn't be listed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded, selected]);
+
+  // A summary label per route, placed where it doesn't share road with the others.
+  useEffect(() => {
+    const instance = map.current;
+    if (!loaded || !instance) return;
+    const placed = labels.current;
+    for (const route of routes) {
+      const element = routeLabelElement(route, route.id === routes[0].id);
+      element.classList.toggle("route-label-selected", route.id === latest.current.selected.id);
+      element.addEventListener("click", () => latest.current.onSelectRoute(route.id));
+      const others = routes.filter((other) => other.id !== route.id);
+      placed.set(
+        route.id,
+        new Marker({ element, anchor: "bottom", offset: [0, -8] })
+          .setLngLat(labelPoint(route, others))
+          .addTo(instance),
+      );
+    }
+    return () => {
+      for (const marker of placed.values()) marker.remove();
+      placed.clear();
+    };
+  }, [loaded, routes]);
 
   // Heatmap data arrives after the plan; it's loaded once, then each hour only redraws.
   useEffect(() => {

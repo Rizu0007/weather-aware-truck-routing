@@ -3,6 +3,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ApiError } from "@/api/client";
 import type { MapHandle } from "@/components/features/map/map-view";
 import { HeatmapControls } from "@/components/features/heatmap/heatmap-controls";
+import { HeatmapLegend } from "@/components/features/heatmap/heatmap-legend";
 import { CheckpointTable } from "@/components/features/results/checkpoint-table";
 import { DepartureAdvice } from "@/components/features/results/departure-advice";
 import { PlanError } from "@/components/features/results/plan-error";
@@ -41,6 +42,11 @@ const HOW_IT_WORKS = [
   ],
 ] as const;
 
+/** Height of a panel floating over the map; 0 when the layout puts it outside (small screens). */
+function coveredHeight(panel: HTMLElement | null): number {
+  return panel && getComputedStyle(panel).position === "absolute" ? panel.offsetHeight + 12 : 0;
+}
+
 // MapLibre is the largest dependency: load it after the form, in its own chunk.
 const loadMap = () => import("@/components/features/map/map-view");
 const MapView = lazy(loadMap);
@@ -71,6 +77,8 @@ export function PlannerPage() {
   const selected = data?.routes.find((route) => route.id === routeId) ?? data?.routes[0];
   const heatmap = useHeatmap(data);
   const mapHandle = useRef<MapHandle>(null);
+  const legendPanel = useRef<HTMLDivElement>(null);
+  const timelinePanel = useRef<HTMLDivElement>(null);
   const [heatmapVisible, setHeatmapVisible] = useState(true);
   // Off by default for users who asked their system for less motion.
   const [weatherMotion, setWeatherMotion] = useState(() => !prefersReducedMotion());
@@ -179,7 +187,9 @@ export function PlannerPage() {
         <RiskInfoPanel />
       </aside>
 
-      <div className="flex min-w-0 flex-col gap-4">
+      {/* Large screens: the map column stays in view while the left side scrolls, so table,
+          strip and timeline always show their effect on the map. */}
+      <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-18 lg:h-[calc(100dvh-5.5rem)]">
         {!trip && (
           <div className="flex flex-col items-start gap-4 rounded-card border border-dashed border-border p-6">
             <h2 className="text-base font-semibold">How it works</h2>
@@ -201,49 +211,71 @@ export function PlannerPage() {
             </Button>
           </div>
         )}
+        {trip && plan.isFetching && (
+          <Skeleton className="h-[55svh] min-h-80 rounded-card lg:h-auto lg:flex-1" />
+        )}
         {data && selected && (
-          <section aria-label="Map" className="h-[55svh] min-h-80 lg:h-[60vh]">
-            <Suspense
-              fallback={
-                <Skeleton className="flex h-full items-center justify-center rounded-card text-sm text-muted-foreground" />
-              }
+          <section
+            aria-label="Map"
+            className="relative flex flex-col gap-4 lg:min-h-[22rem] lg:flex-1"
+          >
+            <div className="h-[55svh] min-h-80 lg:h-auto lg:min-h-0 lg:flex-1">
+              <Suspense
+                fallback={
+                  <Skeleton className="flex h-full items-center justify-center rounded-card text-sm text-muted-foreground" />
+                }
+              >
+                <MapView
+                  ref={mapHandle}
+                  heatmap={heatmap.data}
+                  heatmapVisible={heatmapVisible}
+                  weatherMotion={weatherMotion}
+                  initialHour={hour}
+                  routes={data.routes}
+                  selectedId={selected.id}
+                  activeMile={checkpoint.activeMile}
+                  hoverMile={checkpoint.hoverMile}
+                  onSelectRoute={setRouteId}
+                  onActivateCheckpoint={checkpoint.activate}
+                  fitInsets={() => ({
+                    top: coveredHeight(legendPanel.current),
+                    bottom: coveredHeight(timelinePanel.current),
+                  })}
+                />
+              </Suspense>
+            </div>
+            <div
+              ref={legendPanel}
+              className="absolute top-3 left-3 z-10 max-w-[calc(100%-5rem)] rounded-card border border-border bg-map-panel px-3 py-2 shadow-card"
             >
-              <MapView
-                ref={mapHandle}
+              <HeatmapLegend motion={weatherMotion && heatmapVisible && Boolean(heatmap.data)} />
+            </div>
+            <div ref={timelinePanel} className="lg:absolute lg:inset-x-3 lg:bottom-3 lg:z-10">
+              <HeatmapControls
+                // A new plan starts from its own hour (from the URL, else 0).
+                key={plan.dataUpdatedAt}
                 heatmap={heatmap.data}
-                heatmapVisible={heatmapVisible}
-                weatherMotion={weatherMotion}
+                loading={heatmap.isFetching}
+                error={heatmap.error}
+                onRetry={() => void heatmap.refetch()}
+                visible={heatmapVisible}
+                onVisibleChange={setHeatmapVisible}
+                route={selected}
+                motion={weatherMotion}
+                onMotionChange={setWeatherMotion}
                 initialHour={hour}
-                routes={data.routes}
-                selectedId={selected.id}
-                activeMile={checkpoint.activeMile}
-                hoverMile={checkpoint.hoverMile}
-                onSelectRoute={setRouteId}
-                onActivateCheckpoint={checkpoint.activate}
+                onHourChange={(next) => mapHandle.current?.setHeatmapHour(next)}
+                onHourCommit={setHour}
+                className="lg:bg-map-panel lg:p-3 lg:shadow-card"
               />
-            </Suspense>
+            </div>
           </section>
         )}
-        {data && (
-          <HeatmapControls
-            // A new plan starts from its own hour (from the URL, else 0).
-            key={plan.dataUpdatedAt}
-            heatmap={heatmap.data}
-            loading={heatmap.isFetching}
-            error={heatmap.error}
-            onRetry={() => void heatmap.refetch()}
-            visible={heatmapVisible}
-            onVisibleChange={setHeatmapVisible}
-            route={selected}
-            motion={weatherMotion}
-            onMotionChange={setWeatherMotion}
-            initialHour={hour}
-            onHourChange={(next) => mapHandle.current?.setHeatmapHour(next)}
-            onHourCommit={setHour}
-          />
-        )}
         {data && selected && (
-          <section aria-labelledby="checkpoints-heading" className="flex flex-col gap-3">
+          <section
+            aria-labelledby="checkpoints-heading"
+            className="flex flex-col gap-3 lg:max-h-[38%] lg:min-h-0"
+          >
             <h2 id="checkpoints-heading" className="text-base font-semibold">
               Checkpoints on route {selected.id}
               <span className="ml-2 text-sm font-normal text-muted-foreground">
@@ -261,6 +293,7 @@ export function PlannerPage() {
               activeMile={checkpoint.activeMile}
               onActivate={checkpoint.activate}
               onHover={checkpoint.hover}
+              className="lg:max-h-none lg:min-h-0 lg:flex-1"
             />
           </section>
         )}

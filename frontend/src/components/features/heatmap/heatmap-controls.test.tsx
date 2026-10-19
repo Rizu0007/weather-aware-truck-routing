@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { HeatmapControls } from "@/components/features/heatmap/heatmap-controls";
+import { HeatmapLegend } from "@/components/features/heatmap/heatmap-legend";
 import { ApiError } from "@/api/client";
 import heatmapFixture from "@/test/fixtures/heatmap.json";
 import type { Heatmap } from "@/types/api";
@@ -87,12 +88,15 @@ describe("HeatmapControls", () => {
     expect(screen.getByRole("button", { name: "Play through the hours" })).toBeDisabled();
   });
 
-  it("shows a legend with every level named", () => {
-    renderControls();
+  it("the legend names every level, and what moves on the map only while it moves", () => {
+    const { rerender } = render(<HeatmapLegend />);
 
     expect(screen.getByRole("list", { name: "Risk colours" })).toHaveTextContent(
-      "Low (clear)ModerateHighSevereNo Travel",
+      "LowModerateHighSevereNo Travel",
     );
+    expect(screen.queryByRole("list", { name: "What moves on the map" })).toBeNull();
+
+    rerender(<HeatmapLegend motion />);
     expect(screen.getByRole("list", { name: "What moves on the map" })).toHaveTextContent(
       "Wind 25+ mphRain 0.1+ in/hrSnow 0.5+ in/hr",
     );
