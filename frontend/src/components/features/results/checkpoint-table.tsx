@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { RISK_LABELS } from "@/constants/risk";
 import type { PlannedRoute } from "@/types/api";
 import { cn } from "@/utils/cn";
-import { formatClock, timeZoneAbbreviation } from "@/utils/format";
+import { formatClock, formatReading, timeZoneAbbreviation } from "@/utils/format";
 
 function reading(value: number | null, decimals: number) {
   return value === null ? (
@@ -14,7 +14,7 @@ function reading(value: number | null, decimals: number) {
       —
     </span>
   ) : (
-    value.toFixed(decimals)
+    formatReading(value, decimals)
   );
 }
 

@@ -4,7 +4,7 @@ import math
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from trips.domain.checkpoints import Checkpoint, TruckTimeline, build_checkpoints
+from trips.domain.checkpoints import Checkpoint, TruckTimeline, build_checkpoints, checkpoint_miles
 from trips.domain.conditions import Conditions, driving_conditions
 from trips.domain.geo import Coord, simplify, slice_line
 from trips.domain.ranking import (
@@ -29,6 +29,10 @@ Weather = tuple[float | None, float | None, float | None]  # wind mph, rain and 
 SIMPLIFY_TOLERANCE_DEG = 0.0005
 # How much later a safer departure is looked for, in whole hours.
 LATER_DEPARTURE_HOURS = 24
+INTERVALS_MI = (10, 25, 50)
+# Open-Meteo allows ~600 locations/min for all users, and a slowed caller needs ~0.45 s each:
+# 240 keeps a cross-country plan inside one minute's quota and the 90 s client timeout.
+MAX_CHECKPOINTS = 240
 
 
 @dataclass(frozen=True)
@@ -98,6 +102,8 @@ def plan_trip(
     later_hours = min(
         LATER_DEPARTURE_HOURS, max(0, (latest_departure(longest) - departure) // timedelta(hours=1))
     )
+    requested_mi = interval_mi
+    interval_mi = _fit_interval(requested_mi, [t.total_miles for t in timelines])
     checkpoints = [build_checkpoints(t, departure, interval_mi) for t in timelines]
     series = _series_by_checkpoint(checkpoints, departure, longest, later_hours)
     routes = [
@@ -113,6 +119,11 @@ def plan_trip(
     ]
 
     warnings = list(found.warnings)
+    if interval_mi != requested_mi:
+        warnings.append(
+            f"Checkpoints are every {interval_mi} mi instead of {requested_mi} mi: "
+            "a trip this long would use up the weather service's limit."
+        )
     if missing := sum(
         None in (c.wind_mph, c.rain_in_hr, c.snow_in_hr) for r in routes for c in r.checkpoints
     ):
@@ -132,6 +143,14 @@ def plan_trip(
         departure_advice=_safer_departure(routes, series, departure, load_lb, later_hours),
         warnings=warnings,
     )
+
+
+def _fit_interval(requested_mi: int, route_miles: list[float]) -> int:
+    """The requested spacing, widened until all routes together fit MAX_CHECKPOINTS."""
+    for interval in (i for i in INTERVALS_MI if i >= requested_mi):
+        if sum(len(checkpoint_miles(m, interval)) for m in route_miles) <= MAX_CHECKPOINTS:
+            return interval
+    return max(INTERVALS_MI)
 
 
 def _series_by_checkpoint(

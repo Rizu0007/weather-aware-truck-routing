@@ -7,6 +7,7 @@ import {
   formatDuration,
   formatMiles,
   formatPounds,
+  formatReading,
   localInputToIso,
   nextFullHour,
   toLocalInputValue,
@@ -67,5 +68,18 @@ describe("datetime-local conversions (tests run in America/Chicago)", () => {
     expect(toLocalInputValue(nextFullHour(new Date("2026-10-20T19:42:10Z")))).toBe(
       "2026-10-20T15:00",
     );
+  });
+});
+
+describe("formatReading", () => {
+  it("rounds down so a value never reads as the next risk band", () => {
+    expect(formatReading(44.6, 0)).toBe("44");
+    expect(formatReading(0.249, 2)).toBe("0.24");
+    expect(formatReading(0.96, 1)).toBe("0.9");
+  });
+
+  it("keeps exact values despite float error", () => {
+    expect(formatReading(0.29, 2)).toBe("0.29");
+    expect(formatReading(45, 0)).toBe("45");
   });
 });

@@ -3,10 +3,10 @@ import { Badge } from "@/components/ui/badge";
 import { RISK_LABELS } from "@/constants/risk";
 import type { Checkpoint } from "@/types/api";
 import { formatVisibility } from "@/utils/conditions";
-import { formatDateTime } from "@/utils/format";
+import { formatDateTime, formatReading } from "@/utils/format";
 
 function value(reading: number | null, decimals: number, unit: string): string {
-  return reading === null ? "no data" : `${reading.toFixed(decimals)} ${unit}`;
+  return reading === null ? "no data" : `${formatReading(reading, decimals)} ${unit}`;
 }
 
 /** Contents of the map popup for one checkpoint (rendered into MapLibre's popup). */

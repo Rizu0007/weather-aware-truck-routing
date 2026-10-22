@@ -4,6 +4,12 @@ export function formatMiles(miles: number): string {
   return `${Math.round(miles).toLocaleString("en-US")} mi`;
 }
 
+/** Rounds down like the backend's risk reasons, so 44.6 mph never reads as Severe's 45. */
+export function formatReading(value: number, decimals: number): string {
+  const factor = 10 ** decimals;
+  return (Math.floor(value * factor + 1e-9) / factor).toFixed(decimals);
+}
+
 export function formatDuration(seconds: number): string {
   const minutes = Math.round(seconds / 60);
   const hours = Math.floor(minutes / 60);

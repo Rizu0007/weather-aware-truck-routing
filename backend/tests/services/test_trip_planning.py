@@ -169,6 +169,30 @@ def test_checkpoints_cover_the_whole_route():
 
 
 @responses.activate
+def test_long_trips_widen_the_checkpoint_spacing_with_a_warning(monkeypatch):
+    monkeypatch.setattr("trips.services.trip_planning.MAX_CHECKPOINTS", 30)
+    mock_two_routes()
+
+    result = plan(interval_mi=10)
+
+    assert result.interval_mi == 25
+    assert sum(len(r.checkpoints) for r in result.routes) <= 30
+    assert any(
+        w.startswith("Checkpoints are every 25 mi instead of 10 mi") for w in result.warnings
+    )
+
+
+@responses.activate
+def test_short_trips_keep_the_requested_spacing():
+    mock_two_routes()
+
+    result = plan(interval_mi=10)
+
+    assert result.interval_mi == 10
+    assert not any(w.startswith("Checkpoints are every") for w in result.warnings)
+
+
+@responses.activate
 def test_missing_forecast_values_are_scored_as_calm_with_a_warning():
     def gaps(lon, lat, hour):
         values = calm(lon, lat, hour)
