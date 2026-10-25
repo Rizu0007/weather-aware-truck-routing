@@ -93,10 +93,10 @@ and waits up to 90 s.
 | Backend | Django 5.2 LTS, Django REST Framework, `requests`; uv, Ruff, pytest |
 | Frontend | React 19, Vite 8, TypeScript, React Router 8, TanStack Query, Tailwind CSS 4, MapLibre GL |
 | Map tiles | OpenFreeMap (dark style) |
-| Hosting | Render (backend) and Vercel (frontend) |
+| Hosting | Vercel: one project, two services (`vercel.json`), the frontend at `/` and Django at `/api` |
 
-The browser only calls `/api/...` on its own origin; Vite (dev), nginx (Docker) or a `vercel.json`
-rewrite (production) forwards it to Django. No CORS, and no API URL or key ever reaches the browser.
+The browser only calls `/api/...` on its own origin; Vite (dev), nginx (Docker) or the `vercel.json`
+service routing (production) sends it to Django. No CORS, and no API URL or key ever reaches the browser.
 
 ```text
 backend/trips/

@@ -1,0 +1,10 @@
+# Local-only files the deployment never needs; Vercel installs and builds itself.
+**/.venv
+**/node_modules
+**/dist
+**/__pycache__
+**/.pytest_cache
+**/.ruff_cache
+**/.env
+**/.env.local
+scripts
