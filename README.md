@@ -4,7 +4,7 @@
 
 **Pick the safest route by the weather the truck will actually drive into, not just the fastest one.**
 
-[![CI](https://github.com/Rizu0007/ide/actions/workflows/ci.yml/badge.svg)](https://github.com/Rizu0007/ide/actions/workflows/ci.yml)
+[![CI](https://github.com/Rizu0007/weather-aware-truck-routing/actions/workflows/ci.yml/badge.svg)](https://github.com/Rizu0007/weather-aware-truck-routing/actions/workflows/ci.yml)
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
 ![TypeScript](https://img.shields.io/badge/TypeScript-6-3178C6?logo=typescript&logoColor=white)
 ![Django](https://img.shields.io/badge/Django-5.2_LTS-092E20?logo=django&logoColor=white)
