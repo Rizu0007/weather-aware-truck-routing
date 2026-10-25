@@ -10,6 +10,12 @@ WORKDIR /app
 # Dependencies first, so code changes don't reinstall them.
 COPY pyproject.toml uv.lock .python-version ./
 
+FROM base AS test
+RUN uv sync --locked
+COPY . .
+CMD ["sh", "-c", "ruff check && ruff format --check && pytest"]
+
+# Last, so hosts that build without a target (Render) get the server, not the tests.
 FROM base AS runtime
 RUN uv sync --locked --no-dev
 COPY . .
@@ -21,8 +27,3 @@ HEALTHCHECK --interval=10s --timeout=3s --retries=5 \
 # One worker so the in-memory cache (routes, weather, rate limits) is shared by every
 # request; threads, because requests mostly wait on providers. Timeout covers slow retries.
 CMD ["gunicorn", "config.wsgi", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "8", "--timeout", "120"]
-
-FROM base AS test
-RUN uv sync --locked
-COPY . .
-CMD ["sh", "-c", "ruff check && ruff format --check && pytest"]
