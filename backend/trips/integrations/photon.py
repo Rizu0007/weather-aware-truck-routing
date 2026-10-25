@@ -18,6 +18,10 @@ NORTH_AMERICA_BBOX = "-168,14,-52,72"
 AREA_TYPES = frozenset({"county", "state", "country"})
 TOWN_TAGS = (("osm_tag", "place:town"), ("osm_tag", "place:city"))
 TOWN_SNAP_DEG = 0.05
+# Photon's public server has outages of hours; after a failure, callers skip it for this long
+# rather than spend its retries on every request.
+OUTAGE_KEY = "photon-down"
+OUTAGE_S = 60
 
 
 @dataclass(frozen=True)
@@ -55,6 +59,14 @@ def search(query: str, limit: int = 5) -> list[Place]:
     return result
 
 
+def is_down() -> bool:
+    return bool(cache.get(OUTAGE_KEY))
+
+
+def mark_down() -> None:
+    cache.set(OUTAGE_KEY, True, OUTAGE_S)
+
+
 def nearest_town(point: Coord, radius_km: float) -> Place | None:
     """Closest town or city to `point` within `radius_km`, if any."""
     lon, lat = (round(round(v / TOWN_SNAP_DEG) * TOWN_SNAP_DEG, 2) for v in point)
@@ -64,7 +76,11 @@ def nearest_town(point: Coord, radius_km: float) -> Place | None:
         return cached
 
     params = [("lon", lon), ("lat", lat), ("radius", radius), ("limit", 1), *TOWN_TAGS]
-    found = _places(get_json(PROVIDER, f"{settings.PHOTON_URL}/reverse", params))
+    try:
+        found = _places(get_json(PROVIDER, f"{settings.PHOTON_URL}/reverse", params))
+    except ProviderError:
+        mark_down()
+        raise
     town = found[0][1] if found else None
     cache.set(key, town, CACHE_TTL_S)  # "no town here" is worth remembering too
     return town

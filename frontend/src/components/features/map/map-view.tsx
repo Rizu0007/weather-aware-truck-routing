@@ -494,8 +494,17 @@ export default function MapView({
     opened.on("close", () => {
       if (!closedByUs) latest.current.onActivateCheckpoint(null);
     });
+    // The popup lives inside the map's container, so this only fires while focus is on the map.
+    const container = instance.getContainer();
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      opened.remove();
+      instance.getCanvas().focus(); // the close button that had focus is gone
+    };
+    container.addEventListener("keydown", closeOnEscape);
     return () => {
       closedByUs = true;
+      container.removeEventListener("keydown", closeOnEscape);
       opened.remove();
     };
   }, [loaded, selected, activeMile, popupNode]);

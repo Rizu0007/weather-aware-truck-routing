@@ -132,6 +132,9 @@ def _nearest_towns(
 
     Failed or late lookups give None; an end with no town nearby adds no country.
     """
+    if photon.is_down():
+        logger.warning("Photon is down; skipping town lookups")
+        return [(offset, None) for offset in alternatives.VIA_OFFSETS], set(), True
     crow_km = haversine_mi(origin, destination) * KM_PER_MI
     radius_km = max(MIN_TOWN_RADIUS_KM, TOWN_RADIUS_SHARE * crow_km)
     pool = ThreadPoolExecutor(max_workers=len(alternatives.VIA_OFFSETS) + 2)
@@ -161,4 +164,8 @@ def _nearest_towns(
             towns.append((offset, None))
         else:
             towns.append((offset, future.result()))
+    # Lookups still retrying past the budget mark Photon down only when they finally fail;
+    # none answering at all is the same outage, so the next plan needn't wait for it.
+    if all(town is None for _, town in towns) and not any(f.done() for f in futures.values()):
+        photon.mark_down()
     return towns, countries, cut_short

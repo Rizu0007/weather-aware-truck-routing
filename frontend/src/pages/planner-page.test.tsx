@@ -320,6 +320,40 @@ describe("PlannerPage: errors", () => {
     }
   });
 
+  it("our own rate limit says so, rather than blaming the data services", async () => {
+    renderPlanner(SHARED, {
+      "/api/trip-plans": () =>
+        new Response(JSON.stringify(errorBody("Request was throttled.")), {
+          status: 429,
+          headers: { "Content-Type": "application/json", "Retry-After": "6" },
+        }),
+    });
+
+    expect(await screen.findByText("Too many trip plans in the last minute")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Retry in 6 s" })).toBeDisabled();
+  });
+
+  it("plans again by itself once a sleeping server wakes up", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let awake = false;
+      renderPlanner(SHARED, {
+        "/api/health": () =>
+          awake ? jsonResponse({ status: "ok" }) : new Response("Bad gateway", { status: 502 }),
+        "/api/trip-plans": () =>
+          awake ? jsonResponse(tripPlan) : new Response("Bad gateway", { status: 502 }),
+      });
+      expect(await screen.findByText(/server is unavailable/)).toBeInTheDocument();
+
+      awake = true;
+      await vi.advanceTimersByTimeAsync(3_000);
+
+      expect(await screen.findByText("Take route B")).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("provider down: offers a retry", async () => {
     let calls = 0;
     renderPlanner(SHARED, {

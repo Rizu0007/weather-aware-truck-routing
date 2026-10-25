@@ -54,17 +54,24 @@ export function PlanError({ error, errorAt, onRetry, onUseDeparture }: PlanError
           </Alert>
         );
       }
+      // 429 is this app's own per-user limit; 503 is a provider's, shared by everyone.
       return (
         <Alert
           variant="warning"
-          title="The weather or routing service is busy"
+          title={
+            error.status === 429
+              ? "Too many trip plans in the last minute"
+              : "The weather or routing service is busy"
+          }
           action={
             <Button size="sm" variant="outline" onClick={onRetry} disabled={secondsLeft > 0}>
               {secondsLeft > 0 ? `Retry in ${secondsLeft} s` : "Retry"}
             </Button>
           }
         >
-          Free data services limit how many requests everyone can make per minute.
+          {error.status === 429
+            ? "Each person can plan a limited number of trips a minute, to keep the free weather service working for everyone."
+            : "Free data services limit how many requests everyone can make per minute."}
         </Alert>
       );
     default:

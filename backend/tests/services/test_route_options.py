@@ -148,6 +148,21 @@ def test_town_lookup_outage_keeps_the_direct_route_and_is_not_cached():
 
 
 @responses.activate
+def test_town_lookup_outage_skips_photon_on_the_next_plan():
+    mock_osrm((200, native()))
+    responses.get(REVERSE_URL, status=503)
+    find_route_options(DALLAS, HOUSTON)
+    reverse_calls = len([c for c in responses.calls if c.request.url.startswith(REVERSE_URL)])
+
+    result = find_route_options(DALLAS, HOUSTON)
+
+    assert len([c for c in responses.calls if c.request.url.startswith(REVERSE_URL)]) == (
+        reverse_calls
+    )
+    assert result.warnings == ["Alternative routes are temporarily unavailable."]
+
+
+@responses.activate
 def test_via_route_outage_keeps_routes_found_before_it():
     mock_osrm((200, native()), [(200, via_route())] + [(503, {})] * 3)  # 503 is retried
     mock_towns([town("Franklin", -96.48, 31.03), town("Cameron", -96.98, 30.85)])

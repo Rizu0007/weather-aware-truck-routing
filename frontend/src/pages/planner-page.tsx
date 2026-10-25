@@ -86,6 +86,18 @@ export function PlannerPage() {
     if (backend === "ready") void loadMap();
   }, [backend]);
 
+  // A plan that failed because the server was asleep is tried again once it wakes up.
+  const backendWasDown = useRef(false);
+  useEffect(() => {
+    if (backend !== "ready") {
+      backendWasDown.current = true;
+      return;
+    }
+    if (!backendWasDown.current) return;
+    backendWasDown.current = false;
+    if (error && ["server", "network", "timeout"].includes(error.kind)) void plan.refetch();
+  }, [backend, error, plan]);
+
   function planTrip(next: TripParams) {
     focusResults.current = true;
     setEditing(false);

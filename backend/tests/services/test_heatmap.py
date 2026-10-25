@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from tests.mocks import OPEN_METEO_URL, calm, mock_forecast, native, via_route
 from trips.domain.risk import RiskLevel
-from trips.exceptions import ForecastHorizonError, ProviderBusyError
+from trips.exceptions import CorridorTooLargeError, ForecastHorizonError, ProviderBusyError
 from trips.services.heatmap import build_heatmap
 
 
@@ -65,6 +65,13 @@ def test_missing_values_count_as_calm_with_a_warning():
 def test_departure_must_leave_48_hours_of_forecast():
     with pytest.raises(ForecastHorizonError):
         build_heatmap(routes=routes(), departure=departure(14 * 24), load_lb=35_000)
+
+
+def test_corridor_over_the_cell_budget_is_rejected_before_fetching(monkeypatch):
+    monkeypatch.setattr("trips.services.heatmap.MAX_CELLS", 1)
+
+    with pytest.raises(CorridorTooLargeError):
+        build_heatmap(routes=routes(), departure=departure(), load_lb=35_000)
 
 
 @responses.activate

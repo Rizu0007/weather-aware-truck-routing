@@ -1,5 +1,5 @@
-import { render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { act, render, screen, within } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
 
 import { CheckpointTable } from "@/components/features/results/checkpoint-table";
 import { Recommendation } from "@/components/features/results/recommendation";
@@ -107,5 +107,17 @@ describe("CheckpointTable", () => {
     render(<CheckpointTable route={route} />);
 
     expect(screen.getByTitle("No forecast data")).toHaveTextContent("—");
+  });
+
+  it("highlights a row's marker on keyboard focus, as on hover", () => {
+    const onHover = vi.fn();
+    render(<CheckpointTable route={ROUTE_A} onActivate={() => {}} onHover={onHover} />);
+    const mile = ROUTE_A.checkpoints[1].mile;
+    const button = screen.getByRole("button", { name: `Mile ${Math.round(mile)}: show on map` });
+
+    act(() => button.focus());
+    expect(onHover).toHaveBeenLastCalledWith(mile);
+    act(() => button.blur());
+    expect(onHover).toHaveBeenLastCalledWith(null);
   });
 });

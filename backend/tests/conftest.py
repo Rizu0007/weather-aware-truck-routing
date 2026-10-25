@@ -1,4 +1,5 @@
 import json
+import threading
 from pathlib import Path
 
 import pytest
@@ -18,6 +19,11 @@ def load_sample(name: str):
 def empty_cache():
     cache.clear()
     yield
+    # A lookup the code gave up on still finishes in its thread and caches its answer;
+    # wait for it, or it lands in the next test's cache.
+    for thread in threading.enumerate():
+        if thread.name.startswith("ThreadPoolExecutor"):
+            thread.join(timeout=5)
     cache.clear()
 
 

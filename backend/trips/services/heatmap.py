@@ -3,9 +3,10 @@
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
-from trips.domain.corridor import corridor_grid
+from trips.domain.corridor import MAX_CELLS, corridor_grid
 from trips.domain.geo import Coord
 from trips.domain.risk import level_series
+from trips.exceptions import CorridorTooLargeError
 from trips.integrations import open_meteo
 from trips.services.forecast_window import HEATMAP_HOURS, check_forecast_horizon
 
@@ -32,6 +33,9 @@ class Heatmap:
 def build_heatmap(*, routes: list[list[Coord]], departure: datetime, load_lb: int) -> Heatmap:
     check_forecast_horizon(departure, timedelta(hours=HEATMAP_HOURS))
     grid = corridor_grid(routes)
+    # Even the coarsest cells can't fit; fetching anyway would spend most of a minute's quota.
+    if len(grid.centers) > MAX_CELLS:
+        raise CorridorTooLargeError(extra={"cells": len(grid.centers)})
     start = departure.astimezone(UTC).replace(minute=0, second=0, microsecond=0)
     hours = HEATMAP_HOURS + 1  # 0 to 48 inclusive
     series = open_meteo.hourly(grid.centers, start, hours)

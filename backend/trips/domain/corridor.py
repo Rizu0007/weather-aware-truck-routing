@@ -9,7 +9,7 @@ from trips.domain.geo import Coord, haversine_mi
 KM_PER_MI = 1.609344
 CORRIDOR_KM = 50  # each side of the route
 # Open-Meteo's free tier allows ~600 locations/min for all users together; a plan
-# needs up to ~160, so a heatmap gets 120 to fit ~3 plan + heatmap pairs a minute.
+# can take up to 240 (trip_planning.MAX_CHECKPOINTS), so a heatmap gets 120 to leave room.
 MAX_CELLS = 120
 CELL_SIZES_DEG = (0.1, 0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 1.0)
 

@@ -23,6 +23,13 @@ class ForecastHorizonError(ApplicationError):
     default_message = "The trip extends beyond the available weather forecast."
 
 
+class CorridorTooLargeError(ApplicationError):
+    status_code = 422
+    default_message = (
+        "These routes cover too much ground for a weather grid. Pick one route or a shorter trip."
+    )
+
+
 class ProviderError(ApplicationError):
     """A third-party service failed or returned something we can't use."""
 

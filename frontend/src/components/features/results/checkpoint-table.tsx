@@ -7,6 +7,7 @@ import { RISK_LABELS } from "@/constants/risk";
 import type { PlannedRoute } from "@/types/api";
 import { cn } from "@/utils/cn";
 import { formatClock, formatReading, timeZoneAbbreviation } from "@/utils/format";
+import { prefersReducedMotion } from "@/utils/motion";
 
 function reading(value: number | null, decimals: number) {
   return value === null ? (
@@ -47,7 +48,11 @@ export function CheckpointTable({
     const visible =
       row.offsetTop >= box.scrollTop + header &&
       row.offsetTop + row.offsetHeight <= box.scrollTop + box.clientHeight;
-    if (!visible) box.scrollTo?.({ top: row.offsetTop - header, behavior: "smooth" });
+    if (!visible)
+      box.scrollTo?.({
+        top: row.offsetTop - header,
+        behavior: prefersReducedMotion() ? "auto" : "smooth",
+      });
   }, [activeMile]);
 
   return (
@@ -98,6 +103,9 @@ export function CheckpointTable({
               aria-current={checkpoint.mile === activeMile || undefined}
               onMouseEnter={() => onHover?.(checkpoint.mile)}
               onMouseLeave={() => onHover?.(null)}
+              // Keyboard users tabbing through rows see the same marker highlight.
+              onFocus={() => onHover?.(checkpoint.mile)}
+              onBlur={() => onHover?.(null)}
               className={cn(checkpoint.mile === activeMile && "bg-secondary/60")}
             >
               <th scope="row" className="px-3 py-2 font-medium">
