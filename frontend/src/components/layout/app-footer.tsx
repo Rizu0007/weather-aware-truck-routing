@@ -2,11 +2,12 @@ const SOURCES = [
   { label: "Open-Meteo.com", href: "https://open-meteo.com/", note: "weather, CC BY 4.0" },
   { label: "OSRM", href: "https://project-osrm.org/", note: "routing" },
   { label: "Photon", href: "https://photon.komoot.io/", note: "places" },
+  { label: "GeoNames", href: "https://www.geonames.org/", note: "towns, CC BY 4.0" },
   { label: "OpenFreeMap", href: "https://openfreemap.org/", note: "map tiles" },
   { label: "OpenMapTiles", href: "https://openmaptiles.org/", note: "map schema" },
 ];
 
-/** Data credits: Open-Meteo's licence requires attribution; OSM data is in tiles, routes and places. */
+/** Data credits: Open-Meteo's and GeoNames' licences require attribution; OSM data is in tiles, routes and places. */
 export function AppFooter() {
   return (
     <footer className="border-t border-border text-xs text-muted-foreground">

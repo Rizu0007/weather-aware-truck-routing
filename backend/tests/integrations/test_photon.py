@@ -4,10 +4,9 @@ from django.conf import settings
 
 from tests.conftest import load_sample
 from trips.exceptions import ProviderError
-from trips.integrations.photon import NORTH_AMERICA_BBOX, nearest_town, search
+from trips.integrations.photon import NORTH_AMERICA_BBOX, search
 
 SEARCH_URL = f"{settings.PHOTON_URL}/api/"
-REVERSE_URL = f"{settings.PHOTON_URL}/reverse"
 
 
 @responses.activate
@@ -76,28 +75,6 @@ def test_search_error_is_a_provider_error():
 
     with pytest.raises(ProviderError):
         search("x")
-
-
-@responses.activate
-def test_nearest_town_returns_the_town():
-    responses.get(REVERSE_URL, json=load_sample("photon_reverse_town"))
-
-    town = nearest_town((-96.93, 31.0), radius_km=50)
-
-    assert town.label == "Cameron, Texas"
-    assert town.coord == (-96.9769304, 30.8532454)
-    query = responses.calls[0].request.url
-    assert "osm_tag=place%3Atown&osm_tag=place%3Acity" in query
-    assert "radius=50" in query
-
-
-@responses.activate
-def test_no_town_in_radius_is_none_and_cached():
-    responses.get(REVERSE_URL, json=load_sample("photon_reverse_no_town"))
-
-    assert nearest_town((-121.35, 46.6), radius_km=20) is None
-    assert nearest_town((-121.35, 46.6), radius_km=20) is None
-    assert len(responses.calls) == 1
 
 
 def feature(name, osm_key, lon=-80.19, lat=25.77, **props):

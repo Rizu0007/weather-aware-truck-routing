@@ -10,7 +10,7 @@
 ![Django](https://img.shields.io/badge/Django-5.2_LTS-092E20?logo=django&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
 ![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?logo=vercel&logoColor=white)
-![Tests](https://img.shields.io/badge/tests-514_passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-515_passing-brightgreen)
 
 ### [▶ Live demo](https://truck-weather-routing-chi.vercel.app)
 
@@ -89,7 +89,7 @@ flowchart LR
     FE -- "POST /api/heatmaps" --> BE
     FE -- "GET /api/places" --> BE
     BE --> OSRM[(OSRM<br/>routes)]
-    BE --> PH[(Photon<br/>places · via towns)]
+    BE --> PH[(Photon<br/>place search)]
     BE --> OM[(Open-Meteo<br/>hourly forecast)]
     BE --> D{{"checkpoints → ETAs → risk<br/>→ grade → ranking → leave-later"}}
     D -- JSON --> FE
@@ -97,7 +97,9 @@ flowchart LR
 
 1. **Routes.** OSRM's public server usually returns only 1–2 routes. For the missing ones the backend
    forces a route through the **nearest town** to a point beside the direct line (towns sit on
-   through-roads; raw offset points snap to dirt roads). A candidate is dropped if more than 80 % of
+   through-roads; raw offset points snap to dirt roads). The towns come from a bundled list of
+   27,000 US, Canadian and Mexican towns (GeoNames, built by `scripts/build_towns.py`), so finding
+   them needs no network call and can't fail when a free service is down. A candidate is dropped if more than 80 % of
    it overlaps a route already kept, or if it takes more than 1.5× the fastest. Towns in a country
    neither end is in are skipped (no detours through Mexico on a US trip). Corridors with one
    sensible road return fewer routes, with a warning.
@@ -246,7 +248,7 @@ above (standard library only, e.g. `python3 scripts/probe_osrm.py`).
 
 | Layer | What | Command |
 |---|---|---|
-| Backend (269 tests) | Risk bands and load rules, checkpoints and ETAs, ranking, provider clients (mocked from real saved responses), every API error | `cd backend && uv run pytest` |
+| Backend (270 tests) | Risk bands and load rules, checkpoints and ETAs, ranking, provider clients (mocked from real saved responses), every API error | `cd backend && uv run pytest` |
 | Frontend (245 tests) | UI components, hooks, API client errors, pages, map/table wiring, WCAG contrast of the colour tokens | `cd frontend && npm test` |
 | Time zones | The time suite under New York, Chicago, Los Angeles, London, Karachi and Kolkata, including the UK (25 Oct) and US (1 Nov) daylight-saving changes | `cd frontend && npm run test:zones` |
 | CI | All of the above plus lint, format, type check and build on every push | `.github/workflows/ci.yml` |
@@ -264,7 +266,7 @@ loading state, a cold start, and time zones (a UK browser shows "14:00 BST").
 | Service | Limit we hit | What the app does |
 |---|---|---|
 | OSRM demo | 1–2 routes; ~1 request/s policy; occasional 10 s+ stalls | Town via-points (above); a 20 s budget for alternatives, then plan with what was found |
-| Photon | Results are global; typos rank streets first ("Maimi" → Maimi Circle); occasional stalls and hours-long outages | North America bounding box; towns before streets unless the query has a number; town lookups in parallel, capped at 8 s; after a failure, Photon is skipped for 60 s (place search falls back to Open-Meteo geocoding, plans go ahead without via-town alternatives) |
+| Photon | Results are global; typos rank streets first ("Maimi" → Maimi Circle); occasional stalls and hours-long outages (on 2 Nov 2026 it refused the hosted backend for hours) | North America bounding box; towns before streets unless the query has a number; after a failure, Photon is skipped for 60 s and place search falls back to Open-Meteo geocoding. Routes no longer depend on it: via-towns come from the bundled GeoNames list |
 | Open-Meteo | ~600 locations/min for all users; ~15 days ahead; a heavy caller is slowed to ~0.45 s per location, and 4 parallel requests get 503s | Batches of 50, 2 at a time, read timeout grown with batch size (up to 45 s), 15-min cache, a plan ≤ 240 checkpoints (spacing widened on long trips), heatmap ≤ 120 cells, a 429 becomes "busy, retry in N s" |
 
 Repeat plans are served from the backend cache in ~0.1 s. The UI says "Still working…" after 10 s
@@ -286,6 +288,7 @@ Where the brief left room:
 ## Data credits
 
 Weather by [Open-Meteo.com](https://open-meteo.com/) (CC BY 4.0). Routing by
-[OSRM](https://project-osrm.org/), places by [Photon](https://photon.komoot.io/), map tiles by
+[OSRM](https://project-osrm.org/), places by [Photon](https://photon.komoot.io/), towns for
+alternative routes from [GeoNames](https://www.geonames.org/) (CC BY 4.0), map tiles by
 [OpenFreeMap](https://openfreemap.org/) and [OpenMapTiles](https://openmaptiles.org/). Map data ©
 [OpenStreetMap contributors](https://www.openstreetmap.org/copyright).

@@ -28,6 +28,19 @@ def empty_cache():
 
 
 @pytest.fixture(autouse=True)
+def fake_towns(monkeypatch):
+    """Route options look up towns in a table the test fills (tests.mocks.mock_towns).
+
+    The real bundled list is tested in tests/domain/test_towns.py.
+    """
+    from tests import mocks
+    from trips.services import route_options
+
+    mocks.TOWN_ANSWERS.clear()
+    monkeypatch.setattr(route_options, "nearest_town", mocks.fake_nearest_town)
+
+
+@pytest.fixture(autouse=True)
 def no_retry_delay(monkeypatch):
     monkeypatch.setattr(http, "BACKOFF_S", 0)
 

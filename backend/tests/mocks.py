@@ -11,10 +11,10 @@ from django.conf import settings
 
 from tests.conftest import load_sample
 from trips.domain.alternatives import VIA_OFFSETS, via_point
-from trips.integrations.photon import TOWN_SNAP_DEG
+from trips.domain.towns import Town
+from trips.services import route_options
 
 OSRM_URL = re.compile(re.escape(settings.OSRM_URL) + r"/route/v1/driving/.*")
-REVERSE_URL = f"{settings.PHOTON_URL}/reverse"
 OPEN_METEO_URL = settings.OPEN_METEO_URL
 TIME_FORMAT = "%Y-%m-%dT%H:%M"
 
@@ -53,51 +53,40 @@ def mock_osrm(direct, via_answers=()):
     responses.add_callback(responses.GET, OSRM_URL, callback=callback)
 
 
-def town(name, lon, lat, country="US"):
-    feature = copy.deepcopy(load_sample("photon_reverse_town")["features"][0])
-    feature["properties"]["name"] = name
-    feature["properties"]["countrycode"] = country
-    feature["geometry"]["coordinates"] = [lon, lat]
-    return {"type": "FeatureCollection", "features": [feature]}
+def town(name, lon, lat, country="US", state="Texas"):
+    label = ", ".join(p for p in (name, state, country if country != "US" else None) if p)
+    return Town(label, lon, lat, country)
 
 
 def no_town():
-    return load_sample("photon_reverse_no_town")
+    return None
+
+
+# Answers for the town lookups, by point: see mock_towns.
+TOWN_ANSWERS: dict[tuple[float, float], Town | None] = {}
+
+
+def fake_nearest_town(point, radius_km):
+    return TOWN_ANSWERS.get(_key(point))
 
 
 def mock_towns(answers, origin=DALLAS, destination=HOUSTON, ends=(None, None)):
-    """Answer each via-point's /reverse lookup: answers[i] is for VIA_OFFSETS[i].
+    """Answer each via-point's town lookup: answers[i] is for VIA_OFFSETS[i].
 
-    `ends` answers the lookups at the origin and destination (default: no town).
-
-    An answer is a body, a (status, body) pair, or a callable returning either.
-
-    Matched by coordinates, not call order, because the lookups run in parallel.
+    `ends` answers the lookups at the origin and destination (default: no town). Any other
+    point has no town. Tests get the fake lookup from conftest; this also installs it, for
+    tests/capture_frontend_fixtures.py.
     """
-    by_point = {}
+    route_options.nearest_town = fake_nearest_town
     for offset, answer in zip(VIA_OFFSETS, answers, strict=False):
-        lon, lat = via_point(origin, destination, offset)
-        by_point[(_snap(lon), _snap(lat))] = answer
-    for (lon, lat), answer in zip((origin, destination), ends, strict=True):
+        TOWN_ANSWERS[_key(via_point(origin, destination, offset))] = answer
+    for end, answer in zip((origin, destination), ends, strict=True):
         if answer is not None:
-            by_point[(_snap(lon), _snap(lat))] = answer
-
-    def callback(request):
-        query = parse_qs(urlparse(request.url).query)
-        point = (round(float(query["lon"][0]), 2), round(float(query["lat"][0]), 2))
-        answer = by_point.get(point, no_town())
-        if callable(answer):  # e.g. a slow answer
-            answer = answer(request)
-        if isinstance(answer, tuple):  # (status, body)
-            return answer[0], {}, json.dumps(answer[1])
-        return 200, {}, json.dumps(answer)
-
-    responses.add_callback(responses.GET, REVERSE_URL, callback=callback)
+            TOWN_ANSWERS[_key(end)] = answer
 
 
-def _snap(value: float) -> float:
-    # Same rounding as photon.nearest_town.
-    return round(round(value / TOWN_SNAP_DEG) * TOWN_SNAP_DEG, 2)
+def _key(point) -> tuple[float, float]:
+    return round(point[0], 6), round(point[1], 6)
 
 
 def calm(lon, lat, hour):
