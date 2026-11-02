@@ -18,3 +18,7 @@ dist/
 scripts/.cache/
 .vercel
 .env*.local
+
+# Demo video (outputs and tools)
+media/
+.demo-tools/
